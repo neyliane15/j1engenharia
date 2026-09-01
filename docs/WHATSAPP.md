@@ -17,6 +17,9 @@ Olá, Hidra!
 
 *Hidráulica das prumadas — Bloco B*
 Prazo para resposta: *20/09/2026 às 18:00*
+Entrega em: *Niterói*
+Critério de decisão: *entrega mais rápida*.
+Há 3 anexos da obra no link abaixo.
 
 *Itens:*
 1. Tubo PVC soldável 25mm — barra 6m — 100 br (ref: Tigre)
@@ -48,12 +51,40 @@ preferir preencher numa tabela. Os dois caminhos gravam na mesma proposta.
 | `MARCA 1 Tigre` | marca oferecida no item 1 |
 | `SEM 3` | item 3 indisponível |
 | `FRETE 150` | valor do frete (`FRETE GRÁTIS` zera) |
-| `DESCONTO 50` | desconto no total |
+| `DESCONTO 50` | desconto no total da proposta |
+| `DESCONTO 1 10%` | desconto de 10% no item 1 |
 | `RESUMO` | espelho da proposta com os totais |
 | `ENVIAR` | fecha e envia a proposta |
 | `RECUSAR` | declina a participação |
 | `AJUDA` | lista os comandos |
 | `COT-2026-0012` | troca para outra cotação aberta, pelo código |
+
+### O convite já diz como o comprador vai decidir
+
+A mensagem informa o critério — menor preço, entrega mais rápida ou melhor
+prazo de pagamento — antes de o fornecedor cotar. Quem sabe que a disputa é
+por prazo de entrega ajusta a proposta em vez de descobrir depois que perdeu
+por dois dias.
+
+Também vão na mensagem a cidade de entrega (para o fornecedor conferir se
+compensa) e quantos anexos existem no link.
+
+### Desconto por item
+
+`DESCONTO 1 10%` aplica 10% no item 1. O resumo mostra o desconto na linha e
+já recalcula o total:
+
+```
+1. Cimento CP-II-E-32 saco 50kg
+    100 sc × R$ 38,90 (-8%) = *R$ 3.578,80*
+```
+
+Com **dois** argumentos o comando é sempre desconto de item. Se a
+porcentagem for inválida — `DESCONTO 1 150%` — o robô responde que não
+entendeu, em vez de interpretar como R$ 1.150 de abatimento no total.
+
+Com **um** argumento é desconto no total: `DESCONTO 50` tira R$ 50 do valor
+final da proposta.
 
 ### Formatos aceitos para preço
 
@@ -158,6 +189,10 @@ quais itens estão sem preço. Ou o fornecedor precifica, ou marca `SEM`.
 **Dá para corrigir depois de enviar.** Enquanto o comprador não aprovar, o
 fornecedor pode mandar novos preços e `ENVIAR` de novo. Depois da aprovação
 a proposta trava.
+
+**O desconto entra na comparação.** O comprador compara o preço com
+desconto, não o de tabela. Quem dá 8% num item de R$ 38,90 chega a R$ 35,79
+e ganha de quem cotou R$ 36,50 sem desconto.
 
 **Quem responde pelo chat fica marcado como WhatsApp.** O comparativo do
 comprador mostra a origem de cada proposta — "via WhatsApp" ou "via site".

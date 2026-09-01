@@ -21,7 +21,9 @@ interface PublicQuotation {
     code: string;
     title: string;
     description: string | null;
+    priority: string;
     deadline: string;
+    deliveryCity: string | null;
     deliveryAddress: string | null;
     paymentTerms: string | null;
     project: { name: string } | null;
@@ -46,7 +48,7 @@ interface PublicQuotation {
     discount: number;
     notes: string | null;
     totalAmount: number;
-    items: { quotationItemId: string; unitPrice: number; brand: string | null; available: boolean }[];
+    items: { quotationItemId: string; unitPrice: number; discountPct: number; brand: string | null; available: boolean }[];
   } | null;
   expired: boolean;
   closed: boolean;
@@ -55,9 +57,16 @@ interface PublicQuotation {
 interface Line {
   quotationItemId: string;
   unitPrice: string;
+  discountPct: string;
   brand: string;
   available: boolean;
 }
+
+const PRIORIDADE_LABEL: Record<string, string> = {
+  PRICE: 'menor preço',
+  DELIVERY_SPEED: 'entrega mais rápida',
+  PAYMENT_TERM: 'melhor prazo de pagamento',
+};
 
 /**
  * Página aberta pelo link do WhatsApp — sem login.
@@ -89,6 +98,7 @@ export default function PublicBid() {
       next[item.id] = {
         quotationItemId: item.id,
         unitPrice: bidItem && bidItem.unitPrice > 0 ? String(bidItem.unitPrice) : '',
+        discountPct: bidItem && bidItem.discountPct > 0 ? String(bidItem.discountPct) : '',
         brand: bidItem?.brand ?? item.brandRef ?? '',
         available: bidItem ? bidItem.available : true,
       };
@@ -113,7 +123,10 @@ export default function PublicBid() {
       if (!line?.available) continue;
       const price = parseMoneyInput(line.unitPrice);
       if (price <= 0) missing++;
-      else subtotal += price * item.quantity;
+      else {
+        const desconto = Math.min(100, Math.max(0, parseMoneyInput(line.discountPct)));
+        subtotal += price * item.quantity * (1 - desconto / 100);
+      }
     }
     const f = parseMoneyInput(freight);
     const d = parseMoneyInput(discount);
@@ -134,6 +147,7 @@ export default function PublicBid() {
           items: Object.values(lines).map((l) => ({
             quotationItemId: l.quotationItemId,
             unitPrice: parseMoneyInput(l.unitPrice),
+            discountPct: Math.min(100, Math.max(0, parseMoneyInput(l.discountPct))),
             brand: l.brand || undefined,
             available: l.available,
           })),
@@ -226,6 +240,10 @@ export default function PublicBid() {
             responder até {formatDateTime(q.deadline)}
           </span>
         </p>
+        <p className="mt-2 text-sm text-foreground">
+          Critério de decisão: <strong className="font-medium">{PRIORIDADE_LABEL[q.priority] ?? 'menor preço'}</strong>
+          {q.deliveryCity ? ` · entrega em ${q.deliveryCity}` : ''}
+        </p>
         {q.description && <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{q.description}</p>}
       </div>
 
@@ -245,6 +263,7 @@ export default function PublicBid() {
                   <Th>Item</Th>
                   <Th numeric>Qtd.</Th>
                   <Th numeric className="min-w-[128px]">Preço unit.</Th>
+                  <Th numeric className="min-w-[96px]">Desconto %</Th>
                   <Th className="min-w-[120px]">Marca</Th>
                   <Th numeric>Total</Th>
                   <Th>Tenho</Th>
@@ -280,6 +299,18 @@ export default function PublicBid() {
                           onChange={(e) => updateLine(item.id, { unitPrice: e.target.value })}
                         />
                       </Td>
+                      <Td numeric>
+                        <Input
+                          numeric
+                          inputMode="decimal"
+                          placeholder="0"
+                          className="h-9"
+                          wrapperClassName="w-full"
+                          disabled={locked || !line?.available}
+                          value={line?.discountPct ?? ''}
+                          onChange={(e) => updateLine(item.id, { discountPct: e.target.value })}
+                        />
+                      </Td>
                       <Td>
                         <Input
                           placeholder="Marca"
@@ -291,7 +322,13 @@ export default function PublicBid() {
                         />
                       </Td>
                       <Td numeric className="whitespace-nowrap font-medium">
-                        {line?.available && price > 0 ? formatMoney(price * item.quantity) : '—'}
+                        {line?.available && price > 0
+                          ? formatMoney(
+                              price *
+                                item.quantity *
+                                (1 - Math.min(100, Math.max(0, parseMoneyInput(line.discountPct))) / 100),
+                            )
+                          : '—'}
                       </Td>
                       <Td>
                         <input
@@ -409,12 +446,14 @@ export default function PublicBid() {
             <CardHeader title="Entrega e contato" />
             <CardBody className="space-y-2 text-sm text-muted-foreground">
               {q.project && <p><strong className="text-foreground">Centro de custo:</strong> {q.project.name}</p>}
+              {q.deliveryCity && <p><strong className="text-foreground">Cidade:</strong> {q.deliveryCity}</p>}
               {q.deliveryAddress && <p><strong className="text-foreground">Local:</strong> {q.deliveryAddress}</p>}
               {q.paymentTerms && <p><strong className="text-foreground">Pagamento desejado:</strong> {q.paymentTerms}</p>}
               <p
                 className={cn(
                   // A linha só faz sentido quando há algo acima dela.
-                  (q.project || q.deliveryAddress || q.paymentTerms) && 'border-t border-border pt-2',
+                  (q.project || q.deliveryCity || q.deliveryAddress || q.paymentTerms) &&
+                    'border-t border-border pt-2',
                 )}
               >
                 <strong className="text-foreground">Contato:</strong> {q.contact.name} · {q.contact.email}

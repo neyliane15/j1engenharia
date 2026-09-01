@@ -2,11 +2,23 @@ import { formatBRL } from '../utils/money';
 
 const currency = (v: number) => formatBRL(v);
 
+/** Como o comprador vai decidir. O fornecedor precisa saber antes de cotar. */
+export const PRIORIDADE_LABEL = {
+  PRICE: 'menor preço',
+  DELIVERY_SPEED: 'entrega mais rápida',
+  PAYMENT_TERM: 'melhor prazo de pagamento',
+} as const;
+
+export type Prioridade = keyof typeof PRIORIDADE_LABEL;
+
 export interface InviteTemplateData {
   supplierName: string;
   buyerName: string;
   quotationCode: string;
   quotationTitle: string;
+  priority: Prioridade;
+  deliveryCity?: string | null;
+  attachmentCount?: number;
   deadline: string;
   items: { position: number; description: string; quantity: string; unit: string; brandRef?: string | null }[];
   link: string;
@@ -25,6 +37,11 @@ export function inviteMessage(d: InviteTemplateData): string {
     '',
     `*${d.quotationTitle}*`,
     `Prazo para resposta: *${d.deadline}*`,
+    d.deliveryCity ? `Entrega em: *${d.deliveryCity}*` : '',
+    `Critério de decisão: *${PRIORIDADE_LABEL[d.priority]}*.`,
+    d.attachmentCount
+      ? `Há ${d.attachmentCount} ${d.attachmentCount === 1 ? 'anexo' : 'anexos'} da obra no link abaixo.`
+      : '',
     '',
     '*Itens:*',
     list,
@@ -43,6 +60,7 @@ export function inviteMessage(d: InviteTemplateData): string {
     '• `MARCA 1 Tigre` — marca do item 1',
     '• `SEM 3` — não tenho o item 3',
     '• `FRETE 150` — valor do frete',
+    '• `DESCONTO 1 10%` — 10% de desconto no item 1',
     '• `RESUMO` — conferir o que já enviei',
     '• `ENVIAR` — fechar e enviar a proposta',
     '• `RECUSAR` — não vou participar',
@@ -63,7 +81,8 @@ export function helpMessage(): string {
     '`MARCA 1 Tigre` — marca do item 1',
     '`SEM 3` — item 3 indisponível',
     '`FRETE 150` — valor do frete',
-    '`DESCONTO 50` — desconto no total',
+    '`DESCONTO 50` — desconto no total da proposta',
+    '`DESCONTO 1 10%` — desconto de 10% no item 1',
     '`RESUMO` — ver o que já registrei',
     '`ENVIAR` — fechar e enviar a proposta',
     '`RECUSAR` — declinar esta cotação',
@@ -84,7 +103,17 @@ export function quotationNotFoundMessage(code: string): string {
 
 export interface SummaryData {
   quotationCode: string;
-  lines: { position: number; description: string; quantity: number; unit: string; unitPrice: number; total: number; available: boolean; brand?: string | null }[];
+  lines: {
+    position: number;
+    description: string;
+    quantity: number;
+    unit: string;
+    unitPrice: number;
+    discountPct: number;
+    total: number;
+    available: boolean;
+    brand?: string | null;
+  }[];
   missing: number[];
   subtotal: number;
   freight: number;
@@ -95,11 +124,12 @@ export interface SummaryData {
 }
 
 export function summaryMessage(d: SummaryData): string {
-  const rows = d.lines.map((l) =>
-    l.available
-      ? `${l.position}. ${l.description}\n    ${l.quantity} ${l.unit} × ${currency(l.unitPrice)} = *${currency(l.total)}*${l.brand ? `\n    marca: ${l.brand}` : ''}`
-      : `${l.position}. ${l.description}\n    _indisponível_`,
-  );
+  const rows = d.lines.map((l) => {
+    if (!l.available) return `${l.position}. ${l.description}\n    _indisponível_`;
+    const desconto = l.discountPct > 0 ? ` (-${l.discountPct}%)` : '';
+    const marca = l.brand ? `\n    marca: ${l.brand}` : '';
+    return `${l.position}. ${l.description}\n    ${l.quantity} ${l.unit} × ${currency(l.unitPrice)}${desconto} = *${currency(l.total)}*${marca}`;
+  });
 
   const out = [`*Resumo da sua proposta · ${d.quotationCode}*`, '', ...rows, '', '━━━━━━━━━━━━━━━'];
 

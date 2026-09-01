@@ -6,6 +6,7 @@ import { Forbidden, NotFound } from '../../lib/errors';
 import { authenticate } from '../../middlewares/auth';
 import { requireRole } from '../../middlewares/rbac';
 import { normalizePhone } from '../../utils/phone';
+import { coordenadasDaCidade, dentroDoRaio } from '../../utils/geo';
 import { audit } from '../../utils/audit';
 import { toNumber, round } from '../../utils/money';
 
@@ -24,6 +25,8 @@ const companySelect = {
   city: true,
   state: true,
   address: true,
+  latitude: true,
+  longitude: true,
   logoUrl: true,
   active: true,
   createdAt: true,
@@ -49,6 +52,8 @@ const upsertSchema = z.object({
       categories: z.array(z.string()).optional(),
       description: z.string().optional().nullable(),
       deliveryDays: z.number().int().min(0).max(365).optional(),
+      /** Até quantos km da base o fornecedor entrega. */
+      serviceRadiusKm: z.number().int().min(1).max(1000).optional(),
       paymentTerms: z.string().optional().nullable(),
       autoReply: z.boolean().optional(),
     })
@@ -65,6 +70,10 @@ companiesRouter.get(
         q: z.string().optional(),
         category: z.string().optional(),
         active: z.coerce.boolean().optional(),
+        /** Cidade de entrega: anota a distância e quem atende ali. */
+        deliveryCity: z.string().optional(),
+        /** true esconde quem está fora do raio declarado. */
+        onlyInRange: z.coerce.boolean().default(false),
         page: z.coerce.number().min(1).default(1),
         perPage: z.coerce.number().min(1).max(200).default(50),
       })
@@ -99,7 +108,43 @@ companiesRouter.get(
       prisma.company.count({ where }),
     ]);
 
-    res.json({ data, meta: { total, page: q.page, perPage: q.perPage, pages: Math.ceil(total / q.perPage) } });
+    // Anota a distância até o ponto de entrega e se o fornecedor atende ali.
+    const destino = coordenadasDaCidade(q.deliveryCity);
+    if (!destino) {
+      return res.json({
+        data,
+        meta: { total, page: q.page, perPage: q.perPage, pages: Math.ceil(total / q.perPage) },
+      });
+    }
+
+    const comDistancia = data.map((c) => {
+      const alcance = dentroDoRaio(
+        {
+          latitude: c.latitude ? Number(c.latitude) : null,
+          longitude: c.longitude ? Number(c.longitude) : null,
+          serviceRadiusKm: c.supplierProfile?.serviceRadiusKm ?? 50,
+        },
+        { latitude: destino.latitude, longitude: destino.longitude },
+      );
+      return { ...c, distanceKm: alcance.distanciaKm, inRange: alcance.atende };
+    });
+
+    const filtrados = q.onlyInRange ? comDistancia.filter((c) => c.inRange) : comDistancia;
+    filtrados.sort((a, b) => {
+      if (a.inRange !== b.inRange) return a.inRange ? -1 : 1;
+      return (a.distanceKm ?? Infinity) - (b.distanceKm ?? Infinity);
+    });
+
+    res.json({
+      data: filtrados,
+      meta: {
+        total: q.onlyInRange ? filtrados.length : total,
+        page: q.page,
+        perPage: q.perPage,
+        pages: Math.ceil((q.onlyInRange ? filtrados.length : total) / q.perPage),
+        deliveryCity: q.deliveryCity,
+      },
+    });
   }),
 );
 
@@ -129,6 +174,8 @@ companiesRouter.post(
     const data = upsertSchema.parse(req.body);
     const { profile, ...rest } = data;
 
+    const coords = coordenadasDaCidade(rest.city);
+
     const company = await prisma.company.create({
       data: {
         ...rest,
@@ -136,6 +183,8 @@ companiesRouter.post(
         phone: normalizePhone(rest.phone),
         whatsapp: normalizePhone(rest.whatsapp ?? rest.phone),
         state: rest.state?.toUpperCase() ?? null,
+        latitude: coords?.latitude ?? null,
+        longitude: coords?.longitude ?? null,
         active: rest.active ?? true,
         ...(rest.type === 'SUPPLIER' ? { supplierProfile: { create: profile ?? {} } } : {}),
       },
@@ -167,6 +216,12 @@ companiesRouter.patch(
         ...(rest.phone !== undefined ? { phone: normalizePhone(rest.phone) } : {}),
         ...(rest.whatsapp !== undefined ? { whatsapp: normalizePhone(rest.whatsapp) } : {}),
         ...(rest.state !== undefined ? { state: rest.state?.toUpperCase() ?? null } : {}),
+        ...(rest.city !== undefined
+          ? {
+              latitude: coordenadasDaCidade(rest.city)?.latitude ?? null,
+              longitude: coordenadasDaCidade(rest.city)?.longitude ?? null,
+            }
+          : {}),
         // Só o admin muda tipo e status de ativação.
         ...(req.user!.role === 'ADMIN' ? { ...(type ? { type } : {}), ...(active !== undefined ? { active } : {}) } : {}),
         ...(profile

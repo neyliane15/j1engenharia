@@ -44,6 +44,10 @@ services:
       SEED_ADMIN_NAME: ${SEED_ADMIN_NAME}
       SEED_ADMIN_EMAIL: ${SEED_ADMIN_EMAIL}
       SEED_ADMIN_PASSWORD: ${SEED_ADMIN_PASSWORD}
+      UPLOAD_DIR: /app/uploads
+    volumes:
+      # Anexos vivem em volume, não no banco nem na imagem.
+      - uploads:/app/uploads
     ports:
       - "3333:3333"
     healthcheck:
@@ -103,3 +107,4 @@ services:
 volumes:
   postgres-data:
   n8n-data:
+  uploads:

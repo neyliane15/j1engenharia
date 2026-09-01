@@ -11,6 +11,8 @@
 import { PrismaClient, type Prisma } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 import { randomBytes } from 'node:crypto';
+import { CATALOGO, TOTAL_ITENS } from '../src/data/catalogo';
+import { acharMunicipio } from '../src/data/regiao';
 
 const prisma = new PrismaClient();
 
@@ -25,29 +27,63 @@ const token = () => randomBytes(24).toString('base64url');
 const daysFromNow = (d: number) => new Date(Date.now() + d * 86_400_000);
 const round2 = (n: number) => Math.round(n * 100) / 100;
 
+/**
+ * Fornecedores de demonstração, todos na região de atuação do Emptra:
+ * Niterói, Região dos Lagos e Rio de Janeiro. O raio de atendimento varia
+ * de propósito, para o filtro por distância ter o que mostrar.
+ */
 const SUPPLIERS = [
-  { name: 'Casa Forte Materiais de Construção', trade: 'Casa Forte', city: 'São Paulo', uf: 'SP', whatsapp: '5511988870001', categories: ['Alvenaria', 'Cimento', 'Argamassa'], factor: 1.0 },
-  { name: 'Hidra Distribuidora Hidráulica', trade: 'Hidra', city: 'Guarulhos', uf: 'SP', whatsapp: '5511988870002', categories: ['Hidráulica', 'Conexões', 'Louças'], factor: 1.08 },
-  { name: 'Voltz Elétrica e Iluminação', trade: 'Voltz', city: 'Campinas', uf: 'SP', whatsapp: '5519988870003', categories: ['Elétrica', 'Iluminação'], factor: 0.94 },
-  { name: 'Acabamentos Norte Revestimentos', trade: 'Norte Revestimentos', city: 'Belo Horizonte', uf: 'MG', whatsapp: '5531988870004', categories: ['Revestimento', 'Porcelanato', 'Acabamento'], factor: 1.12 },
-  { name: 'MegaObra Suprimentos', trade: 'MegaObra', city: 'Osasco', uf: 'SP', whatsapp: '5511988870005', categories: ['Alvenaria', 'Elétrica', 'Hidráulica', 'Revestimento'], factor: 0.98 },
+  { name: 'Casa Forte Materiais de Construção', trade: 'Casa Forte', city: 'Niterói', whatsapp: '5521988870001', radius: 40, categories: ['Cimento, cal e argamassas', 'Blocos e alvenaria', 'Agregados e britas'], factor: 1.0 },
+  { name: 'Hidra Distribuidora Hidráulica', trade: 'Hidra', city: 'São Gonçalo', whatsapp: '5521988870002', radius: 60, categories: ['Hidráulica — tubos e conexões', 'Louças, metais e acessórios'], factor: 1.08 },
+  { name: 'Voltz Elétrica e Iluminação', trade: 'Voltz', city: 'Rio de Janeiro', whatsapp: '5521988870003', radius: 120, categories: ['Elétrica — cabos, eletrodutos e quadros', 'Iluminação', 'Automação e segurança'], factor: 0.94 },
+  { name: 'Costa Azul Revestimentos', trade: 'Costa Azul', city: 'Cabo Frio', whatsapp: '5522988870004', radius: 80, categories: ['Revestimentos cerâmicos e porcelanatos', 'Pedras naturais e bancadas'], factor: 1.12 },
+  { name: 'MegaObra Suprimentos', trade: 'MegaObra', city: 'Duque de Caxias', whatsapp: '5521988870005', radius: 150, categories: ['Cimento, cal e argamassas', 'Elétrica — cabos, eletrodutos e quadros', 'Hidráulica — tubos e conexões', 'Tintas e vernizes'], factor: 0.98 },
+  { name: 'Lagos Construção e Acabamento', trade: 'Lagos Construção', city: 'Araruama', whatsapp: '5522988870006', radius: 50, categories: ['Blocos e alvenaria', 'Cobertura e telhados', 'Tintas e vernizes'], factor: 1.05 },
 ];
 
-const CATALOG = [
-  { description: 'Cimento CP-II 50kg', unit: 'sc', quantity: 240, base: 34.9, brandRef: 'Votoran' },
-  { description: 'Argamassa AC-III 20kg', unit: 'sc', quantity: 180, base: 28.5, brandRef: 'Quartzolit' },
-  { description: 'Bloco cerâmico 14x19x39', unit: 'un', quantity: 3200, base: 2.35, brandRef: null },
-  { description: 'Porcelanato acetinado 90x90', unit: 'm²', quantity: 420, base: 89.9, brandRef: 'Portobello' },
-  { description: 'Tubo PVC soldável 25mm 6m', unit: 'br', quantity: 150, base: 22.4, brandRef: 'Tigre' },
-  { description: 'Cabo flexível 2,5mm² 100m', unit: 'rl', quantity: 40, base: 189.0, brandRef: 'Sil' },
-  { description: 'Disjuntor bipolar 40A', unit: 'un', quantity: 60, base: 41.9, brandRef: 'Schneider' },
-  { description: 'Luminária LED embutir 18W', unit: 'un', quantity: 120, base: 54.5, brandRef: 'Philips' },
-  { description: 'Tinta acrílica premium 18L', unit: 'lt', quantity: 32, base: 349.0, brandRef: 'Suvinil' },
-  { description: 'Rejunte flexível 5kg', unit: 'sc', quantity: 90, base: 31.2, brandRef: 'Quartzolit' },
+/** Itens usados nas cotações de demonstração — todos vindos do catálogo. */
+const DEMO_ITENS = [
+  { description: 'Cimento CP-II-E-32 saco 50kg', unit: 'sc', quantity: 240, base: 38.9, brandRef: 'Votoran' },
+  { description: 'Argamassa colante AC-III saco 20kg', unit: 'sc', quantity: 180, base: 31.5, brandRef: 'Quartzolit' },
+  { description: 'Bloco cerâmico vedação 14x19x39', unit: 'un', quantity: 3200, base: 2.55, brandRef: null },
+  { description: 'Porcelanato acetinado 90x90cm', unit: 'm²', quantity: 420, base: 94.9, brandRef: 'Portobello' },
+  { description: 'Tubo PVC soldável 25mm barra 6m', unit: 'br', quantity: 150, base: 24.4, brandRef: 'Tigre' },
+  { description: 'Cabo flexível 2,5mm² rolo 100m', unit: 'rl', quantity: 40, base: 198.0, brandRef: 'Sil' },
+  { description: 'Disjuntor bipolar DIN 40A', unit: 'un', quantity: 60, base: 44.9, brandRef: 'Schneider' },
+  { description: 'Luminária LED de embutir quadrada 18W', unit: 'un', quantity: 120, base: 58.5, brandRef: 'Philips' },
+  { description: 'Tinta acrílica fosca premium 18L', unit: 'lt', quantity: 32, base: 379.0, brandRef: 'Suvinil' },
+  { description: 'Rejunte cimentício flexível 5kg', unit: 'sc', quantity: 90, base: 33.2, brandRef: 'Quartzolit' },
 ];
+
+/** Semeia o catálogo de materiais. Idempotente: roda quantas vezes precisar. */
+async function semearCatalogo() {
+  for (const [ordem, categoria] of CATALOGO.entries()) {
+    const cat = await prisma.category.upsert({
+      where: { slug: categoria.slug },
+      update: { name: categoria.name, position: ordem },
+      create: { slug: categoria.slug, name: categoria.name, position: ordem },
+    });
+
+    for (const item of categoria.items) {
+      await prisma.catalogItem.upsert({
+        where: { categoryId_name: { categoryId: cat.id, name: item.name } },
+        update: { unit: item.unit, keywords: item.keywords ?? [] },
+        create: {
+          categoryId: cat.id,
+          name: item.name,
+          unit: item.unit,
+          keywords: item.keywords ?? [],
+        },
+      });
+    }
+  }
+  console.log(`✓ catálogo    ${CATALOGO.length} categorias · ${TOTAL_ITENS} produtos`);
+}
 
 async function main() {
-  console.log('🌱  Emptra — populando o banco...\n');
+  console.log('Emptra — populando o banco...\n');
+
+  await semearCatalogo();
 
   // ── Admin ───────────────────────────────────────────────────
   const admin = await prisma.user.upsert({
@@ -73,11 +109,13 @@ async function main() {
       tradeName: 'Atelier Vertical',
       cnpj: '12345678000190',
       email: 'compras@ateliervertical.com.br',
-      phone: '5511990001111',
-      whatsapp: '5511990001111',
-      city: 'São Paulo',
-      state: 'SP',
-      address: 'Rua dos Pinheiros, 1200 — Pinheiros',
+      phone: '5521990001111',
+      whatsapp: '5521990001111',
+      city: 'Niterói',
+      state: 'RJ',
+      address: 'Rua Gavião Peixoto, 200 — Icaraí',
+      latitude: acharMunicipio('Niterói')!.lat,
+      longitude: acharMunicipio('Niterói')!.lng,
       active: true,
     },
   });
@@ -92,7 +130,7 @@ async function main() {
       role: 'BUYER',
       status: 'ACTIVE',
       jobTitle: 'Coordenadora de Suprimentos',
-      phone: '5511990001111',
+      phone: '5521990001111',
       companyId: buyerCompany.id,
     },
   });
@@ -100,8 +138,9 @@ async function main() {
 
   const projects = await Promise.all(
     [
-      { name: 'Residencial Alto da Serra', code: 'CC-001', address: 'Av. Serra Azul, 400 — Cotia/SP' },
-      { name: 'Retrofit Edifício Marambaia', code: 'CC-002', address: 'R. Marambaia, 88 — São Paulo/SP' },
+      { name: 'Residencial Praia de Itaipu', code: 'CC-001', address: 'Estrada Francisco da Cruz Nunes, 1200 — Niterói/RJ' },
+      { name: 'Retrofit Edifício Icaraí', code: 'CC-002', address: 'R. Miguel de Frias, 88 — Niterói/RJ' },
+      { name: 'Pousada Peró', code: 'CC-003', address: 'Av. dos Espadartes, 450 — Cabo Frio/RJ' },
     ].map((p) =>
       prisma.project.upsert({
         where: { id: `${buyerCompany.id.slice(0, 8)}-${p.code}` },
@@ -116,6 +155,7 @@ async function main() {
 
   for (const [index, s] of SUPPLIERS.entries()) {
     const cnpj = `9876543000${String(index + 10).padStart(4, '0')}`;
+    const municipio = acharMunicipio(s.city)!;
     const company = await prisma.company.upsert({
       where: { cnpj },
       update: {},
@@ -127,14 +167,17 @@ async function main() {
         email: `contato@${s.trade.toLowerCase().replace(/\s+/g, '')}.com.br`,
         phone: s.whatsapp,
         whatsapp: s.whatsapp,
-        city: s.city,
-        state: s.uf,
+        city: municipio.name,
+        state: municipio.state,
+        latitude: municipio.lat,
+        longitude: municipio.lng,
         active: true,
         supplierProfile: {
           create: {
             categories: s.categories,
-            description: `Distribuidor de materiais em ${s.city}/${s.uf}.`,
+            description: `Distribuidor de materiais em ${municipio.name}/${municipio.state}.`,
             deliveryDays: 5 + index,
+            serviceRadiusKm: s.radius,
             paymentTerms: index % 2 === 0 ? '28 dias' : '30/60 dias',
             rating: round2(3.8 + index * 0.2),
           },
@@ -170,11 +213,15 @@ async function main() {
       name: 'Ferragens União Ltda',
       tradeName: 'Ferragens União',
       cnpj: '11222333000144',
-      city: 'Santo André',
-      state: 'SP',
-      whatsapp: '5511988870009',
+      city: 'Maricá',
+      state: 'RJ',
+      latitude: acharMunicipio('Maricá')!.lat,
+      longitude: acharMunicipio('Maricá')!.lng,
+      whatsapp: '5521988870009',
       active: false,
-      supplierProfile: { create: { categories: ['Ferragens', 'Fixação'] } },
+      supplierProfile: {
+        create: { categories: ['Ferragens, fixação e fechaduras'], serviceRadiusKm: 35 },
+      },
     },
   });
   await prisma.user.upsert({
@@ -199,14 +246,19 @@ async function main() {
   }
 
   const scenarios = [
-    { title: 'Estrutura e alvenaria — Bloco A', items: [0, 1, 2], daysAgo: 95, status: 'AWARDED' as const, project: 0 },
-    { title: 'Revestimentos áreas comuns', items: [3, 9], daysAgo: 70, status: 'AWARDED' as const, project: 0 },
-    { title: 'Instalações elétricas — 3º pavimento', items: [5, 6, 7], daysAgo: 45, status: 'AWARDED' as const, project: 1 },
-    { title: 'Hidráulica prumadas', items: [4, 0], daysAgo: 30, status: 'AWARDED' as const, project: 1 },
-    { title: 'Pintura fachada e interiores', items: [8, 9], daysAgo: 12, status: 'CLOSED' as const, project: 0 },
-    { title: 'Complemento elétrico — luminárias', items: [7, 6], daysAgo: 3, status: 'RECEIVING' as const, project: 1 },
-    { title: 'Reposição de cimento e argamassa', items: [0, 1], daysAgo: 1, status: 'SENT' as const, project: 0 },
+    { title: 'Estrutura e alvenaria — Bloco A', items: [0, 1, 2], daysAgo: 95, status: 'AWARDED' as const, project: 0, priority: 'PRICE' as const },
+    { title: 'Revestimentos áreas comuns', items: [3, 9], daysAgo: 70, status: 'AWARDED' as const, project: 0, priority: 'PRICE' as const },
+    { title: 'Instalações elétricas — 3º pavimento', items: [5, 6, 7], daysAgo: 45, status: 'AWARDED' as const, project: 1, priority: 'DELIVERY_SPEED' as const },
+    { title: 'Hidráulica prumadas', items: [4, 0], daysAgo: 30, status: 'AWARDED' as const, project: 1, priority: 'PRICE' as const },
+    { title: 'Pintura fachada e interiores', items: [8, 9], daysAgo: 12, status: 'CLOSED' as const, project: 0, priority: 'PAYMENT_TERM' as const },
+    { title: 'Complemento elétrico — luminárias', items: [7, 6], daysAgo: 3, status: 'RECEIVING' as const, project: 1, priority: 'DELIVERY_SPEED' as const },
+    { title: 'Reposição de cimento e argamassa', items: [0, 1], daysAgo: 1, status: 'SENT' as const, project: 0, priority: 'PRICE' as const },
   ];
+
+  // Índice nome -> id, para amarrar o item da cotação ao catálogo.
+  const catalogoPorNome = new Map(
+    (await prisma.catalogItem.findMany({ select: { id: true, name: true } })).map((i) => [i.name, i.id]),
+  );
 
   let seq = 1;
   for (const scenario of scenarios) {
@@ -231,17 +283,23 @@ async function main() {
         createdById: buyer.id,
         projectId: projects[scenario.project]?.id ?? null,
         deadline,
+        priority: scenario.priority,
         deliveryAddress: projects[scenario.project]?.address ?? null,
+        deliveryCity: scenario.project === 2 ? 'Cabo Frio' : 'Niterói',
+        deliveryState: 'RJ',
+        deliveryLat: acharMunicipio(scenario.project === 2 ? 'Cabo Frio' : 'Niterói')!.lat,
+        deliveryLng: acharMunicipio(scenario.project === 2 ? 'Cabo Frio' : 'Niterói')!.lng,
         paymentTerms: '28 dias após entrega',
         createdAt,
         sentAt: createdAt,
         closedAt: scenario.status === 'SENT' || scenario.status === 'RECEIVING' ? null : deadline,
         items: {
           create: scenario.items.map((catIndex, position) => {
-            const c = CATALOG[catIndex];
+            const c = DEMO_ITENS[catIndex];
             return {
               position: position + 1,
               description: c.description,
+              catalogItemId: catalogoPorNome.get(c.description) ?? null,
               unit: c.unit,
               quantity: c.quantity,
               brandRef: c.brandRef,
@@ -273,16 +331,20 @@ async function main() {
 
       const invite = quotation.invites.find((inv) => inv.supplierCompanyId === s.company.id)!;
       const itemsData: Prisma.BidItemCreateWithoutBidInput[] = quotation.items.map((item, idx) => {
-        const base = CATALOG[scenario.items[idx]].base;
+        const base = DEMO_ITENS[scenario.items[idx]].base;
         const variation = 1 + ((i * 7 + idx * 3) % 17) / 100 - 0.06;
         const unitPrice = round2(base * s.factor * variation);
+        // Um fornecedor concede desconto de linha, para o comparativo
+        // mostrar como o desconto entra na conta.
+        const discountPct = i === 1 && idx === 0 ? 5 : 0;
         return {
           quotationItem: { connect: { id: item.id } },
           quantity: item.quantity,
           unitPrice,
-          total: round2(unitPrice * Number(item.quantity)),
+          discountPct,
+          total: round2(unitPrice * Number(item.quantity) * (1 - discountPct / 100)),
           available: true,
-          brand: CATALOG[scenario.items[idx]].brandRef,
+          brand: DEMO_ITENS[scenario.items[idx]].brandRef,
           leadTimeDays: 5 + i,
         };
       });
@@ -356,15 +418,18 @@ async function main() {
 }
 
 async function summary() {
-  const [companies, users, quotations, bids, awards] = await Promise.all([
+  const [companies, users, quotations, bids, awards, categorias, produtos] = await Promise.all([
     prisma.company.count(),
     prisma.user.count(),
     prisma.quotation.count(),
     prisma.bid.count(),
     prisma.award.count(),
+    prisma.category.count(),
+    prisma.catalogItem.count(),
   ]);
 
   console.log('\n─────────────────────────────────────────');
+  console.log(`catálogo ${categorias} categorias · ${produtos} produtos`);
   console.log(`empresas ${companies} · usuários ${users} · cotações ${quotations} · propostas ${bids} · pedidos ${awards}`);
   console.log('─────────────────────────────────────────');
   console.log('\nAcessos de demonstração (senha: ' + DEMO_PASSWORD + ')');
@@ -376,7 +441,7 @@ async function summary() {
 
 main()
   .catch((err) => {
-    console.error('\n✗ falha no seed:', err);
+    console.error('\nfalha no seed:', err);
     process.exit(1);
   })
   .finally(async () => {

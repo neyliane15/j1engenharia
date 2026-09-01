@@ -15,6 +15,8 @@ bidsRouter.use(authenticate, requireCompany);
 const bidItemSchema = z.object({
   quotationItemId: z.string().uuid(),
   unitPrice: z.number().nonnegative(),
+  /** Desconto que o fornecedor concede neste item, em porcentagem. */
+  discountPct: z.number().min(0).max(100).default(0),
   brand: z.string().optional().nullable(),
   available: z.boolean().default(true),
   leadTimeDays: z.number().int().min(0).max(365).optional().nullable(),
@@ -57,7 +59,15 @@ bidsRouter.get(
         take: q.perPage,
         include: {
           quotation: {
-            select: { id: true, code: true, title: true, status: true, deadline: true, buyerCompany: { select: { name: true } } },
+            select: {
+              id: true,
+              code: true,
+              title: true,
+              status: true,
+              priority: true,
+              deadline: true,
+              buyerCompany: { select: { name: true } },
+            },
           },
           supplierCompany: { select: { id: true, name: true } },
           _count: { select: { items: true } },
@@ -172,6 +182,7 @@ bidsRouter.put(
           quotationItemId: item.quotationItemId,
           quantity: qi.quantity,
           unitPrice: item.unitPrice,
+          discountPct: item.discountPct,
           available: item.available,
           brand: item.brand ?? null,
           leadTimeDays: item.leadTimeDays ?? null,
@@ -179,6 +190,7 @@ bidsRouter.put(
         },
         update: {
           unitPrice: item.unitPrice,
+          discountPct: item.discountPct,
           available: item.available,
           brand: item.brand ?? null,
           leadTimeDays: item.leadTimeDays ?? null,

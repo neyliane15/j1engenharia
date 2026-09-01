@@ -15,12 +15,15 @@ aprovada com planilha baixada pelo fornecedor.
 3. [Instalação local sem Docker](#3-instalação-local-sem-docker-desenvolvimento)
 4. [Configurar o WhatsApp](#4-configurar-o-whatsapp)
 5. [Importar e ligar os workflows do n8n](#5-importar-e-ligar-os-workflows-do-n8n)
-6. [Teste de ponta a ponta](#6-teste-de-ponta-a-ponta)
-7. [Primeiro uso: liberando acessos](#7-primeiro-uso-liberando-acessos)
-8. [Colocar em produção](#8-colocar-em-produção)
-9. [Trocar a logomarca e as cores](#9-trocar-a-logomarca-e-as-cores)
-10. [Backup e manutenção](#10-backup-e-manutenção)
-11. [Solução de problemas](#11-solução-de-problemas)
+6. [Região de atuação e raio de atendimento](#6-região-de-atuação-e-raio-de-atendimento)
+7. [Catálogo de materiais](#7-catálogo-de-materiais)
+8. [Anexos: fotos da obra e PDFs](#8-anexos-fotos-da-obra-e-pdfs)
+9. [Teste de ponta a ponta](#9-teste-de-ponta-a-ponta)
+10. [Primeiro uso: liberando acessos](#10-primeiro-uso-liberando-acessos)
+11. [Colocar em produção](#11-colocar-em-produção)
+12. [Trocar a logomarca e as cores](#12-trocar-a-logomarca-e-as-cores)
+13. [Backup e manutenção](#13-backup-e-manutenção)
+14. [Solução de problemas](#14-solução-de-problemas)
 
 ---
 
@@ -287,29 +290,169 @@ a mensagem recebida e a resposta enviada aparecem lá.
 
 ---
 
-## 6. Teste de ponta a ponta
+## 6. Região de atuação e raio de atendimento
+
+O Emptra opera em **Niterói, Região dos Lagos e Rio de Janeiro**. Os 32
+municípios atendidos, com as coordenadas de cada um, ficam em
+`backend/src/data/regiao.ts`, agrupados em quatro regiões:
+
+| Região | Municípios |
+| --- | --- |
+| Niterói | Niterói |
+| Rio de Janeiro | Rio de Janeiro |
+| Região dos Lagos | Maricá, Saquarema, Araruama, Iguaba Grande, São Pedro da Aldeia, Cabo Frio, Arraial do Cabo, Armação dos Búzios, Rio das Ostras, Casimiro de Abreu, Silva Jardim |
+| Região Metropolitana | São Gonçalo, Itaboraí, Rio Bonito, Tanguá, Magé, Guapimirim, Duque de Caxias, São João de Meriti, Nova Iguaçu, Belford Roxo, Nilópolis, Mesquita, Queimados, Japeri, Seropédica, Itaguaí, Petrópolis, Teresópolis, Cachoeiras de Macacu |
+
+### Como o raio funciona
+
+1. Ao se cadastrar, o **fornecedor escolhe a cidade** e **até quantos km
+   entrega** — 15, 25, 40, 60, 80, 120 ou 200. A coordenada da cidade é
+   gravada junto no cadastro.
+2. Ao criar a cotação, o **comprador escolhe a cidade de entrega**.
+3. A tela de seleção de fornecedores passa a mostrar **a distância de cada
+   um até o local**, e marca quem está fora do raio declarado.
+4. A caixa "Mostrar só quem atende *cidade*" vem ligada. Desmarque para
+   convidar alguém de fora — o fornecedor recebe do mesmo jeito e decide se
+   vale a viagem.
+
+> A distância é em linha reta entre os centros dos municípios, não pela
+> estrada. Serve para o raio de atendimento, que se pensa em dezenas de
+> quilômetros, não para calcular frete.
+
+### Acrescentar um município
+
+Edite `backend/src/data/regiao.ts` acrescentando o registro com nome,
+estado, região e coordenadas, e reinicie a API. Não há migração: a tabela é
+código.
+
+```ts
+{ name: 'Nova Friburgo', state: 'RJ', region: 'metropolitana', lat: -22.2820, lng: -42.5310 },
+```
+
+Cadastros antigos guardam a coordenada gravada na hora do cadastro. Se você
+mudar a coordenada de uma cidade, reabra e salve a empresa para atualizar.
+
+---
+
+## 7. Catálogo de materiais
+
+São **27 categorias e 400 produtos** de Arquitetura e Engenharia, de cimento
+a piso tátil. O arquivo é `backend/src/data/catalogo.ts` e o seed carrega no
+banco.
+
+### Para que serve
+
+- **Comprador**: o campo de descrição do item sugere produtos enquanto ele
+  digita. Escolher da lista amarra o item ao catálogo, e é isso que permite
+  comparar o preço do mesmo material entre cotações diferentes no
+  **Histórico de preços**.
+- **Fornecedor**: as categorias que ele marca no cadastro vêm dessa mesma
+  lista, então comprador e fornecedor falam a mesma língua.
+
+A busca entende sinônimos de obra: digitar `cano` acha *Tubo PVC*, `fio`
+acha *Cabo flexível*, `tijolo` acha *Bloco cerâmico*. Nome bate antes de
+sinônimo, então `porcelanato` traz os porcelanatos antes da argamassa que
+serve para assentá-los.
+
+**O comprador não fica preso ao catálogo**: pode digitar qualquer descrição.
+O item entra sem vínculo e a cotação funciona igual.
+
+### Acrescentar produtos
+
+Edite `backend/src/data/catalogo.ts` e rode o seed de novo — ele é
+idempotente, atualiza o que mudou e não duplica nada:
+
+```bash
+docker compose exec api npx tsx prisma/seed.ts
+```
+
+```ts
+{
+  slug: 'nova-categoria',
+  name: 'Nova categoria',
+  items: [
+    { name: 'Produto novo 10mm', unit: 'un', keywords: ['apelido na obra'] },
+  ],
+}
+```
+
+---
+
+## 8. Anexos: fotos da obra e PDFs
+
+O comprador anexa fotos e plantas à cotação, e o fornecedor vê tudo junto do
+pedido de preço.
+
+### Como o armazenamento fica pequeno
+
+Nenhum byte de arquivo entra no banco. O que acontece no upload:
+
+| Etapa | O que é feito |
+| --- | --- |
+| Recebe | JPEG, PNG, WebP ou PDF, até 15 MB cada, 5 por vez, 10 por cotação |
+| Redimensiona | imagem cai para no máximo 1600px no maior lado |
+| Recomprime | vira JPEG progressivo em qualidade 72 |
+| Limpa | EXIF, GPS e perfil de cor são descartados no processo |
+| Grava | vai para `UPLOAD_DIR` no disco; o banco guarda só o caminho e os metadados |
+
+Na prática uma foto de celular de 4 MB fica em torno de **200 KB** — cerca
+de 95% menor. Dez anexos por cotação ocupam uns 2 MB de disco, não de banco.
+
+PDF vai como veio: comprimir exigiria reescrever o documento, e o risco de
+corromper uma planta não compensa os KB economizados. O limite depois da
+compressão é 8 MB por arquivo.
+
+### Onde os arquivos ficam
+
+No Docker é o volume `uploads`, montado em `/app/uploads`:
+
+```yaml
+volumes:
+  - uploads:/app/uploads
+```
+
+Fora do Docker, ajuste `UPLOAD_DIR` no `.env` para um caminho gravável.
+
+**Entram no backup.** O `pg_dump` não leva os anexos — veja a seção 13.
+
+Excluir a cotação apaga a pasta de anexos junto.
+
+---
+
+## 9. Teste de ponta a ponta
 
 Este é o roteiro que prova que o sistema inteiro funciona.
 
-### 6.1 Criar a cotação (comprador)
+### 9.1 Criar a cotação (comprador)
 
 1. Entre como `comprador@emptra.com.br`.
 2. **Minhas cotações → Nova cotação**.
-3. Preencha o título, o prazo e dois ou três itens.
-4. Marque os fornecedores à direita.
-5. **Criar e enviar no WhatsApp**.
+3. Preencha o título e o prazo.
+4. Escolha a **cidade de entrega** — a lista de fornecedores à direita passa
+   a mostrar a distância de cada um e a esconder quem não atende ali.
+5. Escolha **o que priorizar**: menor preço, entrega mais rápida ou melhor
+   prazo de pagamento. Isso vai na mensagem ao fornecedor e ordena o
+   comparativo depois.
+6. Nos itens, comece a digitar e **escolha do catálogo** — a unidade vem
+   preenchida. Ou escreva livre, se o material não estiver na lista.
+7. Marque os fornecedores.
+8. **Criar e enviar no WhatsApp**.
+9. Na tela da cotação, anexe fotos da obra ou a planta em PDF no bloco
+   **Fotos e documentos da obra**.
 
 O aviso confirma quantos fornecedores receberam. Se a automação estiver fora
 do ar, a mensagem diz exatamente isso — e as falhas ficam em **Admin →
 WhatsApp**.
 
-### 6.2 Responder (fornecedor)
+### 9.2 Responder (fornecedor)
 
-O fornecedor recebe no WhatsApp a lista numerada. Ele responde:
+O fornecedor recebe no WhatsApp a lista numerada, já sabendo o critério de
+decisão, a cidade de entrega e quantos anexos existem. Ele responde:
 
 ```
 1 45,90
 2 128,00
+DESCONTO 1 8%
 PRAZO 7
 ```
 
@@ -330,11 +473,16 @@ curl -X POST http://localhost:3333/webhooks/n8n/whatsapp/inbound \
 
 A resposta traz o texto que o fornecedor veria.
 
-### 6.3 Comparar e aprovar (comprador)
+### 9.3 Comparar e aprovar (comprador)
 
 1. Abra a cotação. O **mapa comparativo** mostra a matriz item × fornecedor,
-   com o melhor preço de cada linha em verde e o quanto cada concorrente
+   com o melhor preço de cada linha destacado e o quanto cada concorrente
    está acima dele.
+   - Onde o fornecedor deu desconto, a célula mostra o preço de tabela
+     riscado e a porcentagem. **A comparação usa o preço com desconto** —
+     comparar tabela contra tabela seria comparar coisas diferentes.
+   - O ranking segue o que você escolheu priorizar. Numa cotação por
+     entrega, quem entrega antes fica em primeiro mesmo custando mais.
 2. **Aprovar cotação**. Escolha:
    - **Fornecedor único** — tudo com um só, ou
    - **Compra dividida** — cada item com quem tem o melhor preço.
@@ -343,7 +491,7 @@ A resposta traz o texto que o fornecedor veria.
 A economia é calculada contra a **média das propostas recebidas** para os
 mesmos itens. Vencedores e perdedores são avisados no WhatsApp na hora.
 
-### 6.4 Baixar a planilha (fornecedor)
+### 9.4 Baixar a planilha (fornecedor)
 
 Entre como o fornecedor vencedor → **Pedidos ganhos** → **Baixar XLSX**.
 
@@ -352,7 +500,7 @@ total, prazo, condição de pagamento e o contato do comprador.
 
 ---
 
-## 7. Primeiro uso: liberando acessos
+## 10. Primeiro uso: liberando acessos
 
 Ninguém entra sozinho. O fluxo é:
 
@@ -374,9 +522,9 @@ normaliza tudo, inclusive tolerando a ausência do nono dígito.
 
 ---
 
-## 8. Colocar em produção
+## 11. Colocar em produção
 
-### 8.1 Checklist de segurança
+### 11.1 Checklist de segurança
 
 - [ ] `JWT_SECRET` e `WEBHOOK_SECRET` gerados com `openssl rand -hex`
 - [ ] `POSTGRES_PASSWORD` e `N8N_BASIC_AUTH_PASSWORD` trocados
@@ -386,8 +534,10 @@ normaliza tudo, inclusive tolerando a ausência do nono dígito.
 - [ ] Senha do administrador trocada
 - [ ] Porta 5432 do Postgres **não** exposta na internet
 - [ ] Backup automático do banco configurado
+- [ ] Backup do volume de anexos configurado (o `pg_dump` não os leva)
+- [ ] `UPLOAD_DIR` apontando para volume persistente, não para dentro da imagem
 
-### 8.2 Domínios sugeridos
+### 11.2 Domínios sugeridos
 
 | Serviço | Domínio |
 | --- | --- |
@@ -409,7 +559,7 @@ N8N_PROTOCOL=https
 > WhatsApp e o link de download do XLSX. Se estiver errado, o fornecedor
 > recebe um link quebrado.
 
-### 8.3 HTTPS com Caddy
+### 11.3 HTTPS com Caddy
 
 O jeito mais curto de ter certificado automático. Crie um `Caddyfile`:
 
@@ -441,7 +591,7 @@ E acrescente ao `docker-compose.yml`:
 
 (adicione `caddy-data:` na seção `volumes:`)
 
-### 8.4 Subir
+### 11.4 Subir
 
 ```bash
 docker compose build --no-cache
@@ -449,7 +599,7 @@ docker compose up -d
 docker compose logs -f api
 ```
 
-### 8.5 Limpar os dados de demonstração
+### 11.5 Limpar os dados de demonstração
 
 ```bash
 docker compose exec api npx prisma studio   # revise antes de apagar
@@ -465,7 +615,7 @@ DELETE FROM companies WHERE cnpj IN ('12345678000190','11222333000144')
 
 ---
 
-## 9. Trocar a logomarca e as cores
+## 12. Trocar a logomarca e as cores
 
 ### Logomarca
 
@@ -520,7 +670,7 @@ Depois de mudar: `cd frontend && npm run build`.
 
 ---
 
-## 10. Backup e manutenção
+## 13. Backup e manutenção
 
 ### Backup do banco
 
@@ -532,6 +682,29 @@ Restaurar:
 
 ```bash
 gunzip -c backup-2026-01-15.sql.gz | docker compose exec -T postgres psql -U emptra emptra
+```
+
+### Backup dos anexos
+
+Os arquivos ficam no volume `uploads`, fora do banco. O `pg_dump` **não** os
+inclui — sem este passo você restaura a cotação sem as fotos.
+
+```bash
+docker run --rm -v emptra_uploads:/data -v $(pwd):/backup alpine \
+  tar czf /backup/anexos-$(date +%F).tar.gz -C /data .
+```
+
+Restaurar:
+
+```bash
+docker run --rm -v emptra_uploads:/data -v $(pwd):/backup alpine \
+  tar xzf /backup/anexos-2026-01-15.tar.gz -C /data
+```
+
+Para ver quanto está ocupando:
+
+```bash
+docker compose exec api du -sh /app/uploads
 ```
 
 ### Backup do n8n
@@ -549,6 +722,7 @@ docker run --rm -v emptra_n8n-data:/data -v $(pwd):/backup alpine \
 
 ```cron
 0 3 * * * cd /opt/emptra && docker compose exec -T postgres pg_dump -U emptra emptra | gzip > /backups/emptra-$(date +\%F).sql.gz
+0 3 * * 0 docker run --rm -v emptra_uploads:/data -v /backups:/backup alpine tar czf /backup/anexos-$(date +\%F).tar.gz -C /data .
 0 4 * * 0 find /backups -name 'emptra-*.sql.gz' -mtime +30 -delete
 ```
 
@@ -564,7 +738,7 @@ docker compose exec api npx prisma migrate status
 
 ---
 
-## 11. Solução de problemas
+## 14. Solução de problemas
 
 ### "Configuração inválida" e a API não sobe
 
@@ -623,6 +797,40 @@ dentro da aplicação.
 `APP_URL` está errado. Ele é a base do link `/cotacao/<token>` que vai na
 mensagem. Corrija e **redispare** a cotação — os links já enviados apontam
 para o endereço antigo.
+
+### Um fornecedor não aparece na lista da cotação
+
+A caixa "Mostrar só quem atende *cidade*" está ligada e ele está fora do
+raio. Desmarque para ver todos — a linha dele mostra a distância e o aviso
+de fora do raio. Se a distância aparecer vazia, a cidade dele não está na
+região de atuação (seção 6) e o raio não pôde ser calculado; nesse caso ele
+nunca é escondido.
+
+### O upload devolve "Só aceitamos JPEG, PNG, WebP e PDF"
+
+O tipo é conferido pelo MIME e, no caso do PDF, também pelos primeiros bytes
+do arquivo. Renomear um `.docx` para `.pdf` não passa.
+
+### O upload devolve "Arquivo maior que 15 MB"
+
+É o limite do que o navegador pode mandar, antes da compressão. Uma foto
+comum de celular tem 3 a 6 MB e passa tranquila; 15 MB costuma ser vídeo ou
+digitalização em resolução altíssima.
+
+### A imagem ficou com menos qualidade que o original
+
+É proposital: 1600px no maior lado e qualidade 72. Foto de obra serve para o
+fornecedor entender o contexto. Se precisar de detalhe fino — leitura de
+etiqueta, trinca milimétrica — mande o recorte já ampliado, ou aumente
+`LADO_MAXIMO` e `QUALIDADE_JPEG` em
+`backend/src/services/storage.service.ts` sabendo que o disco cresce junto.
+
+### O item que digitei não aparece no autocompletar
+
+O catálogo cobre 400 produtos, mas não tudo. Escreva livre: o item entra na
+cotação normalmente, só não fica vinculado ao catálogo (e por isso não entra
+no histórico de preços daquele produto). Para incorporá-lo de vez, veja a
+seção 7.
 
 ### Login recusado com "aguardando liberação"
 

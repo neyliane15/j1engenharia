@@ -36,8 +36,10 @@ src/
 │   ├── whatsapp.bot        máquina de estado da conversa
 │   ├── whatsapp.parser     interpretação das mensagens
 │   ├── whatsapp.templates  todos os textos enviados
+│   ├── storage.service     compressão e guarda dos anexos em disco
 │   └── xlsx.service        planilhas com a marca
-└── utils/                 dinheiro, telefone, códigos, auditoria
+├── data/                  catálogo de materiais e municípios da região
+└── utils/                 dinheiro, telefone, códigos, auditoria, geo
 ```
 
 As rotas validam e delegam; a regra mora nos serviços. Isso é o que permite
@@ -49,13 +51,16 @@ lógica: os três terminam em `recalcBidTotals`.
 
 ```
 Company ──┬── User
-          ├── SupplierProfile
+          ├── SupplierProfile   (categorias, raio de atendimento)
           └── Project
 
+Category ── CatalogItem ┐
+                        │
 Quotation ──┬── QuotationItem ──┬── BidItem ── AwardItem
             ├── QuotationInvite │
             ├── Bid ────────────┘
-            └── Award
+            ├── Award
+            └── Attachment      (metadados; o arquivo fica no disco)
 ```
 
 Decisões que valem explicar:
@@ -71,6 +76,18 @@ Decisões que valem explicar:
 - **Dinheiro é `Decimal(14,2)`** no banco e convertido com `toNumber` na
   borda. Preço unitário usa 4 casas — materiais de baixo valor unitário
   (parafuso, conexão) precisam disso.
+- **`BidItem.discountPct` guarda a porcentagem, não o valor.** O total da
+  linha já sai com o desconto aplicado, e a comparação usa o preço
+  efetivo — comparar tabela contra tabela seria comparar coisas diferentes.
+- **`CatalogItem` é opcional no item da cotação.** O comprador pode escrever
+  livre; o vínculo, quando existe, é o que permite o histórico de preços por
+  produto.
+- **`Attachment` guarda caminho e metadados, nunca bytes.** O arquivo vive em
+  `UPLOAD_DIR`; a imagem é reduzida a 1600px e recomprimida em JPEG no
+  upload, o que derruba uma foto de celular de ~4 MB para ~200 KB.
+- **Coordenadas em `Company` e `Quotation`** vêm da cidade escolhida, a
+  partir da tabela de municípios em `src/data/regiao.ts`. É o que sustenta o
+  raio de atendimento sem depender de serviço externo de geocodificação.
 
 ## Como a economia é calculada
 

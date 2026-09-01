@@ -4,6 +4,40 @@ export type CompanyType = 'BUYER' | 'SUPPLIER';
 export type QuotationStatus = 'DRAFT' | 'SENT' | 'RECEIVING' | 'CLOSED' | 'AWARDED' | 'CANCELLED';
 export type InviteStatus = 'PENDING' | 'SENT' | 'VIEWED' | 'RESPONDED' | 'DECLINED' | 'EXPIRED';
 export type BidStatus = 'DRAFT' | 'SUBMITTED' | 'APPROVED' | 'REJECTED' | 'WITHDRAWN';
+export type QuotationPriority = 'PRICE' | 'DELIVERY_SPEED' | 'PAYMENT_TERM';
+
+export interface Category {
+  id: string;
+  name: string;
+  slug: string;
+  _count?: { items: number };
+}
+
+export interface CatalogItem {
+  id: string;
+  name: string;
+  unit: string;
+  keywords: string[];
+  category: { id: string; name: string; slug: string };
+}
+
+export interface Region {
+  slug: string;
+  name: string;
+  cities: { name: string; state: string }[];
+}
+
+export interface Attachment {
+  id: string;
+  filename: string;
+  mimeType: string;
+  size: number;
+  originalSize?: number;
+  width: number | null;
+  height: number | null;
+  createdAt: string;
+  url?: string;
+}
 
 export interface Company {
   id: string;
@@ -17,10 +51,15 @@ export interface Company {
   city?: string | null;
   state?: string | null;
   address?: string | null;
+  latitude?: string | number | null;
+  longitude?: string | number | null;
   active: boolean;
   createdAt?: string;
   supplierProfile?: SupplierProfile | null;
   _count?: { users: number };
+  /** Preenchidos quando a busca informa a cidade de entrega. */
+  distanceKm?: number | null;
+  inRange?: boolean;
 }
 
 export interface SupplierProfile {
@@ -28,6 +67,8 @@ export interface SupplierProfile {
   categories: string[];
   description?: string | null;
   deliveryDays: number;
+  /** Até quantos km da base o fornecedor entrega. */
+  serviceRadiusKm: number;
   paymentTerms?: string | null;
   rating: string | number;
   autoReply: boolean;
@@ -52,6 +93,7 @@ export interface QuotationItem {
   id: string;
   position: number;
   description: string;
+  catalogItemId?: string | null;
   sku?: string | null;
   unit: string;
   quantity: number | string;
@@ -78,7 +120,10 @@ export interface Quotation {
   title: string;
   description?: string | null;
   status: QuotationStatus;
+  priority: QuotationPriority;
   deadline: string;
+  deliveryCity?: string | null;
+  deliveryState?: string | null;
   deliveryAddress?: string | null;
   deliveryDate?: string | null;
   paymentTerms?: string | null;
@@ -92,6 +137,7 @@ export interface Quotation {
   items?: QuotationItem[];
   invites?: QuotationInvite[];
   awards?: Award[];
+  attachments?: Attachment[];
   _count?: { items: number; invites: number; bids: number };
   myInvite?: QuotationInvite | null;
   myBid?: { id: string; status: BidStatus; totalAmount: number | string } | null;
@@ -101,6 +147,7 @@ export interface BidItem {
   id: string;
   quotationItemId: string;
   unitPrice: number | string;
+  discountPct?: number | string;
   quantity: number | string;
   total: number | string;
   brand?: string | null;
@@ -144,7 +191,11 @@ export interface ComparisonCell {
   supplierId: string;
   supplierName: string;
   bidItemId: string | null;
+  /** Preço de tabela, antes do desconto da linha. */
+  listPrice: number;
+  /** Preço já com o desconto — é o que entra na comparação. */
   unitPrice: number;
+  discountPct: number;
   total: number;
   brand: string | null;
   available: boolean;
@@ -189,6 +240,7 @@ export interface ComparisonSupplier {
 }
 
 export interface Comparison {
+  priority: QuotationPriority;
   rows: ComparisonRow[];
   suppliers: ComparisonSupplier[];
   totals: {

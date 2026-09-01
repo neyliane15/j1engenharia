@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { MapPin, Phone, Search, Star, Truck } from 'lucide-react';
+import { MapPin, Phone, Radius, Search, Star, Truck } from 'lucide-react';
 import { PageHeader } from '@/components/layout/AppShell';
 import { Card } from '@/components/ui/Card';
 import { Input } from '@/components/ui/Input';
@@ -84,6 +84,12 @@ export default function SupplierList() {
                     <Phone className="h-3.5 w-3.5 shrink-0" />
                     {formatPhone(s.whatsapp ?? s.phone)}
                   </p>
+                  {s.supplierProfile?.serviceRadiusKm != null && (
+                    <p className="num flex items-center gap-2">
+                      <Radius className="h-3.5 w-3.5 shrink-0" />
+                      Entrega em até {s.supplierProfile.serviceRadiusKm} km
+                    </p>
+                  )}
                 </div>
 
                 {s.supplierProfile?.categories.length ? (

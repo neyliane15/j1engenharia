@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { ArrowLeft, Check, GripVertical, Plus, Search, Send, Trash2, Truck } from 'lucide-react';
+import { ArrowLeft, Check, Clock, CreditCard, GripVertical, Plus, Search, Send, Tag, Trash2, Truck } from 'lucide-react';
 import { PageHeader } from '@/components/layout/AppShell';
 import { Card, CardBody, CardHeader } from '@/components/ui/Card';
 import { Button, linkButtonClass } from '@/components/ui/Button';
@@ -12,22 +12,32 @@ import { EmptyState } from '@/components/ui/Feedback';
 import { api, ApiError } from '@/lib/api';
 import { cn } from '@/lib/utils';
 import { Link } from 'react-router-dom';
-import type { Company, Paginated, Quotation } from '@/types';
+import { CatalogPicker } from '@/components/CatalogPicker';
+import type { CatalogItem, Company, Paginated, Quotation, QuotationPriority, Region } from '@/types';
 
 interface ItemDraft {
   key: string;
   description: string;
+  catalogItemId: string | null;
   unit: string;
   quantity: string;
   brandRef: string;
   notes: string;
 }
 
+/** O que o comprador quer priorizar — vai na mensagem ao fornecedor. */
+const PRIORIDADES: { value: QuotationPriority; icon: typeof Tag; title: string; text: string }[] = [
+  { value: 'PRICE', icon: Tag, title: 'Menor preço', text: 'O ranking ordena pelo total mais baixo.' },
+  { value: 'DELIVERY_SPEED', icon: Clock, title: 'Entrega mais rápida', text: 'Quem entrega antes aparece primeiro.' },
+  { value: 'PAYMENT_TERM', icon: CreditCard, title: 'Melhor prazo', text: 'Quem dá mais dias para pagar vem antes.' },
+];
+
 const UNITS = ['un', 'sc', 'm', 'm²', 'm³', 'kg', 'lt', 'cx', 'br', 'rl', 'pç', 'pt', 'gl'];
 
 const emptyItem = (): ItemDraft => ({
   key: crypto.randomUUID(),
   description: '',
+  catalogItemId: null,
   unit: 'un',
   quantity: '',
   brandRef: '',
@@ -51,6 +61,9 @@ export default function QuotationNew() {
   const [description, setDescription] = useState('');
   const [projectId, setProjectId] = useState('');
   const [deadline, setDeadline] = useState(defaultDeadline);
+  const [priority, setPriority] = useState<QuotationPriority>('PRICE');
+  const [deliveryCity, setDeliveryCity] = useState('');
+  const [onlyInRange, setOnlyInRange] = useState(true);
   const [deliveryAddress, setDeliveryAddress] = useState('');
   const [paymentTerms, setPaymentTerms] = useState('');
   const [items, setItems] = useState<ItemDraft[]>([emptyItem()]);
@@ -63,9 +76,22 @@ export default function QuotationNew() {
     queryFn: () => api.get<{ data: { id: string; name: string }[] }>('/projects'),
   });
 
+  const { data: regions } = useQuery({
+    queryKey: ['catalog', 'regions'],
+    queryFn: () => api.get<{ regions: Region[] }>('/catalog/regions'),
+    staleTime: 60 * 60_000,
+  });
+
+  // A busca leva a cidade de entrega: o backend devolve a distância de cada
+  // fornecedor e quem atende ali.
   const { data: suppliers } = useQuery({
-    queryKey: ['suppliers', 'picker'],
-    queryFn: () => api.get<Paginated<Company>>('/companies?type=SUPPLIER&perPage=200'),
+    queryKey: ['suppliers', 'picker', deliveryCity, onlyInRange],
+    queryFn: () =>
+      api.get<Paginated<Company>>(
+        `/companies?type=SUPPLIER&perPage=200${deliveryCity ? `&deliveryCity=${encodeURIComponent(deliveryCity)}` : ''}${
+          deliveryCity && onlyInRange ? '&onlyInRange=true' : ''
+        }`,
+      ),
   });
 
   const filteredSuppliers = useMemo(() => {
@@ -105,6 +131,9 @@ export default function QuotationNew() {
       description: description.trim() || undefined,
       projectId: projectId || undefined,
       deadline: new Date(deadline).toISOString(),
+      priority,
+      deliveryCity: deliveryCity || undefined,
+      deliveryState: deliveryCity ? 'RJ' : undefined,
       deliveryAddress: deliveryAddress.trim() || undefined,
       paymentTerms: paymentTerms.trim() || undefined,
       supplierIds: selected,
@@ -112,6 +141,7 @@ export default function QuotationNew() {
         .filter((i) => i.description.trim() && Number(i.quantity) > 0)
         .map((i) => ({
           description: i.description.trim(),
+          catalogItemId: i.catalogItemId ?? undefined,
           unit: i.unit,
           quantity: Number(i.quantity),
           brandRef: i.brandRef.trim() || undefined,
@@ -208,18 +238,66 @@ export default function QuotationNew() {
               </div>
 
               <div className="grid gap-4 sm:grid-cols-2">
+                <Select
+                  label="Cidade de entrega"
+                  value={deliveryCity}
+                  onChange={(e) => setDeliveryCity(e.target.value)}
+                  hint="Define quais fornecedores atendem o local."
+                >
+                  <option value="">Selecione a cidade</option>
+                  {regions?.regions.map((r) => (
+                    <optgroup key={r.slug} label={r.name}>
+                      {r.cities.map((c) => (
+                        <option key={c.name} value={c.name}>
+                          {c.name}
+                        </option>
+                      ))}
+                    </optgroup>
+                  ))}
+                </Select>
                 <Input
-                  label="Local de entrega"
-                  placeholder="Endereço de entrega"
+                  label="Endereço de entrega"
+                  placeholder="Rua, número e bairro"
                   value={deliveryAddress}
                   onChange={(e) => setDeliveryAddress(e.target.value)}
                 />
-                <Input
-                  label="Condição de pagamento desejada"
-                  placeholder="Ex.: 28 dias após entrega"
-                  value={paymentTerms}
-                  onChange={(e) => setPaymentTerms(e.target.value)}
-                />
+              </div>
+
+              <Input
+                label="Condição de pagamento desejada"
+                placeholder="Ex.: 28 dias após entrega"
+                value={paymentTerms}
+                onChange={(e) => setPaymentTerms(e.target.value)}
+              />
+
+              <div>
+                <p className="mb-2 text-[13px] font-medium text-foreground">O que priorizar nesta cotação</p>
+                <div className="grid gap-3 sm:grid-cols-3">
+                  {PRIORIDADES.map((opt) => (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      onClick={() => setPriority(opt.value)}
+                      className={cn(
+                        'flex items-start gap-3 rounded-lg border p-4 text-left transition-colors',
+                        priority === opt.value
+                          ? 'border-primary bg-primary/[0.06] ring-1 ring-primary/25'
+                          : 'border-border bg-card hover:border-primary/35',
+                      )}
+                    >
+                      <opt.icon
+                        className={cn(
+                          'mt-1 h-4 w-4 shrink-0',
+                          priority === opt.value ? 'text-primary' : 'text-muted-foreground',
+                        )}
+                      />
+                      <span>
+                        <span className="block text-sm font-medium text-foreground">{opt.title}</span>
+                        <span className="mt-1 block text-xs leading-snug text-muted-foreground">{opt.text}</span>
+                      </span>
+                    </button>
+                  ))}
+                </div>
               </div>
 
               <Textarea
@@ -270,13 +348,20 @@ export default function QuotationNew() {
                   </div>
 
                   <div className="grid gap-3 sm:grid-cols-12">
-                    <Input
-                      wrapperClassName="sm:col-span-6"
-                      label="Descrição"
-                      placeholder="Tubo PVC soldável 25mm — barra 6m"
-                      value={item.description}
-                      onChange={(e) => updateItem(item.key, { description: e.target.value })}
-                    />
+                    <div className="space-y-2 sm:col-span-6">
+                      <label htmlFor={`desc-${item.key}`} className="block text-[13px] font-medium text-foreground">
+                        Descrição
+                      </label>
+                      <CatalogPicker
+                        id={`desc-${item.key}`}
+                        value={item.description}
+                        placeholder="Digite e escolha do catálogo, ou escreva livre"
+                        onChange={(v) => updateItem(item.key, { description: v, catalogItemId: null })}
+                        onPick={(c: CatalogItem) =>
+                          updateItem(item.key, { description: c.name, catalogItemId: c.id, unit: c.unit })
+                        }
+                      />
+                    </div>
                     <Input
                       wrapperClassName="sm:col-span-2"
                       label="Quantidade"
@@ -317,7 +402,11 @@ export default function QuotationNew() {
           <Card className="xl:sticky xl:top-24">
             <CardHeader
               title="Fornecedores"
-              description={`${selected.length} selecionado${selected.length === 1 ? '' : 's'}`}
+              description={
+                deliveryCity
+                  ? `${selected.length} selecionado${selected.length === 1 ? '' : 's'} · entrega em ${deliveryCity}`
+                  : `${selected.length} selecionado${selected.length === 1 ? '' : 's'}`
+              }
             />
             <div className="border-b border-border p-4">
               <div className="relative">
@@ -329,6 +418,17 @@ export default function QuotationNew() {
                   onChange={(e) => setSupplierSearch(e.target.value)}
                 />
               </div>
+              {deliveryCity && (
+                <label className="mt-3 flex cursor-pointer items-center gap-2 text-xs text-muted-foreground">
+                  <input
+                    type="checkbox"
+                    className="h-4 w-4 accent-[hsl(var(--primary))]"
+                    checked={onlyInRange}
+                    onChange={(e) => setOnlyInRange(e.target.checked)}
+                  />
+                  Mostrar só quem atende {deliveryCity}
+                </label>
+              )}
               {errors.suppliers && <p className="mt-2 text-xs font-medium text-destructive">{errors.suppliers}</p>}
             </div>
 
@@ -363,8 +463,14 @@ export default function QuotationNew() {
                             </span>
                             <span className="mt-1 block truncate text-xs text-muted-foreground">
                               {[s.city, s.state].filter(Boolean).join('/') || 'Localização não informada'}
+                              {s.distanceKm != null && ` · ${s.distanceKm} km`}
                               {!s.whatsapp && ' · sem WhatsApp'}
                             </span>
+                            {s.inRange === false && (
+                              <span className="mt-2 inline-block">
+                                <Badge tone="pending">Fora do raio de {s.supplierProfile?.serviceRadiusKm} km</Badge>
+                              </span>
+                            )}
                             {s.supplierProfile?.categories.length ? (
                               <span className="mt-2 flex flex-wrap gap-1">
                                 {s.supplierProfile.categories.slice(0, 3).map((c) => (

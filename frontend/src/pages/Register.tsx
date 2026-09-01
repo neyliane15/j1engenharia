@@ -5,21 +5,33 @@ import { Logo } from '@/components/Logo';
 import { Button } from '@/components/ui/Button';
 import { Input, Select } from '@/components/ui/Input';
 import { api, ApiError } from '@/lib/api';
+import { useQuery } from '@tanstack/react-query';
 import { cn } from '@/lib/utils';
-import type { Role } from '@/types';
+import type { Category, Region, Role } from '@/types';
 
-const UFS = ['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO'];
-
-const CATEGORIES = [
-  'Alvenaria', 'Cimento', 'Argamassa', 'Hidráulica', 'Elétrica',
-  'Revestimento', 'Acabamento', 'Iluminação', 'Ferragens', 'Madeiras',
-  'Esquadrias', 'Impermeabilização', 'Tintas', 'Louças e metais',
-];
+/** Distâncias que um distribuidor da região realmente pratica. */
+const RAIOS = [15, 25, 40, 60, 80, 120, 200];
 
 export default function Register() {
   const navigate = useNavigate();
   const [role, setRole] = useState<Extract<Role, 'BUYER' | 'SUPPLIER'>>('BUYER');
   const [categories, setCategories] = useState<string[]>([]);
+  const [serviceRadiusKm, setServiceRadiusKm] = useState(40);
+
+  // Só operamos em Niterói, Região dos Lagos e Rio de Janeiro — a cidade
+  // vem de lista para o raio de atendimento poder ser calculado.
+  const { data: regions } = useQuery({
+    queryKey: ['catalog', 'regions'],
+    queryFn: () => api.get<{ regions: Region[] }>('/catalog/regions'),
+    staleTime: 60 * 60_000,
+  });
+
+  const { data: catalogo } = useQuery({
+    queryKey: ['catalog', 'categories'],
+    queryFn: () => api.get<{ data: Category[] }>('/catalog/categories'),
+    staleTime: 60 * 60_000,
+    enabled: role === 'SUPPLIER',
+  });
   const [error, setError] = useState('');
   const [done, setDone] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -48,8 +60,8 @@ export default function Register() {
           companyName: String(form.get('companyName')),
           cnpj: String(form.get('cnpj')) || undefined,
           city: String(form.get('city')) || undefined,
-          state: String(form.get('state')) || undefined,
-          ...(role === 'SUPPLIER' ? { categories } : {}),
+          state: 'RJ',
+          ...(role === 'SUPPLIER' ? { categories, serviceRadiusKm } : {}),
         },
         { auth: false },
       );
@@ -131,43 +143,75 @@ export default function Register() {
             <Input name="companyName" label="Razão social ou nome fantasia" required placeholder="Construtora Exemplo Ltda" />
             <div className="grid gap-4 sm:grid-cols-2">
               <Input name="cnpj" label="CNPJ" placeholder="00.000.000/0001-00" inputMode="numeric" />
-              <Input name="city" label="Cidade" placeholder="São Paulo" />
-            </div>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <Select name="state" label="Estado" defaultValue="">
-                <option value="">Selecione</option>
-                {UFS.map((uf) => (
-                  <option key={uf} value={uf}>{uf}</option>
+              <Select name="city" label="Cidade" required defaultValue="">
+                <option value="">Selecione a cidade</option>
+                {regions?.regions.map((r) => (
+                  <optgroup key={r.slug} label={r.name}>
+                    {r.cities.map((c) => (
+                      <option key={c.name} value={c.name}>{c.name}</option>
+                    ))}
+                  </optgroup>
                 ))}
               </Select>
-              <Input
-                name="phone"
-                label="WhatsApp da empresa"
-                required
-                placeholder="(11) 98888-7777"
-                hint={role === 'SUPPLIER' ? 'É por este número que as cotações chegam.' : undefined}
-              />
             </div>
+            <Input
+              name="phone"
+              label="WhatsApp da empresa"
+              required
+              placeholder="(21) 98888-7777"
+              hint={role === 'SUPPLIER' ? 'É por este número que as cotações chegam.' : undefined}
+            />
+
+            {role === 'SUPPLIER' && (
+              <div>
+                <p className="mb-2 text-[13px] font-medium text-foreground">
+                  Até onde você entrega?{' '}
+                  <span className="font-normal text-muted-foreground">{serviceRadiusKm} km da sua cidade</span>
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {RAIOS.map((km) => (
+                    <button
+                      key={km}
+                      type="button"
+                      onClick={() => setServiceRadiusKm(km)}
+                      className={cn(
+                        'num rounded-chip border px-3 py-1 text-[13px] font-medium transition-colors',
+                        serviceRadiusKm === km
+                          ? 'border-primary bg-primary text-primary-foreground'
+                          : 'border-border bg-card text-muted-foreground hover:border-primary/40',
+                      )}
+                    >
+                      {km} km
+                    </button>
+                  ))}
+                </div>
+                <p className="mt-2 text-xs text-muted-foreground">
+                  Cotações com entrega fora desse raio deixam de aparecer para você por padrão.
+                </p>
+              </div>
+            )}
 
             {role === 'SUPPLIER' && (
               <div>
                 <p className="mb-2 text-[13px] font-medium text-foreground">O que você fornece?</p>
                 <div className="flex flex-wrap gap-2">
-                  {CATEGORIES.map((c) => {
-                    const active = categories.includes(c);
+                  {(catalogo?.data ?? []).map((c) => {
+                    const active = categories.includes(c.name);
                     return (
                       <button
-                        key={c}
+                        key={c.id}
                         type="button"
-                        onClick={() => setCategories((prev) => (active ? prev.filter((x) => x !== c) : [...prev, c]))}
+                        onClick={() =>
+                          setCategories((prev) => (active ? prev.filter((x) => x !== c.name) : [...prev, c.name]))
+                        }
                         className={cn(
-                          'rounded-full border px-3 py-1 text-xs font-medium transition-colors',
+                          'rounded-chip border px-3 py-1 text-[13px] font-medium transition-colors',
                           active
                             ? 'border-primary bg-primary text-primary-foreground'
                             : 'border-border bg-card text-muted-foreground hover:border-primary/40',
                         )}
                       >
-                        {c}
+                        {c.name}
                       </button>
                     );
                   })}

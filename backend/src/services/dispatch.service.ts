@@ -4,6 +4,7 @@ import { logger } from '../lib/logger';
 import { env } from '../config/env';
 import { BadRequest, NotFound } from '../lib/errors';
 import { normalizePhone } from '../utils/phone';
+import { dentroDoRaio } from '../utils/geo';
 import { inviteToken } from '../utils/code';
 import { toNumber } from '../utils/money';
 import { callN8n } from './n8n.service';
@@ -13,7 +14,18 @@ import { notifyCompany } from './notification.service';
 
 export interface DispatchResult {
   quotationId: string;
-  dispatched: { supplierId: string; supplierName: string; phone: string | null; ok: boolean; reason?: string }[];
+  dispatched: {
+    supplierId: string;
+    supplierName: string;
+    phone: string | null;
+    ok: boolean;
+    reason?: string;
+    /** Distância até o ponto de entrega, quando as duas cidades são conhecidas. */
+    distanceKm?: number | null;
+    /** false quando a entrega cai fora do raio que o fornecedor declarou. */
+    inRange?: boolean;
+  }[];
+  outOfRange: number;
   n8nAccepted: boolean;
 }
 
@@ -30,6 +42,7 @@ export async function dispatchQuotation(quotationId: string): Promise<DispatchRe
     where: { id: quotationId },
     include: {
       items: { orderBy: { position: 'asc' } },
+      _count: { select: { attachments: true } },
       buyerCompany: true,
       createdBy: { select: { name: true, email: true, phone: true } },
       invites: { include: { supplierCompany: { include: { supplierProfile: true } } } },
@@ -46,10 +59,27 @@ export async function dispatchQuotation(quotationId: string): Promise<DispatchRe
   const deadline = dayjs(quotation.deadline).format('DD/MM/YYYY [às] HH:mm');
   const dispatched: DispatchResult['dispatched'] = [];
   const n8nInvites: Record<string, unknown>[] = [];
+  const destino = {
+    latitude: quotation.deliveryLat ? Number(quotation.deliveryLat) : null,
+    longitude: quotation.deliveryLng ? Number(quotation.deliveryLng) : null,
+  };
+  let outOfRange = 0;
 
   for (const invite of quotation.invites) {
     const supplier = invite.supplierCompany;
     const phone = normalizePhone(invite.phone ?? supplier.whatsapp ?? supplier.phone);
+
+    // O fornecedor fora do raio continua recebendo — quem decide se vale a
+    // viagem é ele. O comprador é que precisa saber, e por isso anotamos.
+    const alcance = dentroDoRaio(
+      {
+        latitude: supplier.latitude ? Number(supplier.latitude) : null,
+        longitude: supplier.longitude ? Number(supplier.longitude) : null,
+        serviceRadiusKm: supplier.supplierProfile?.serviceRadiusKm ?? 50,
+      },
+      destino,
+    );
+    if (!alcance.atende) outOfRange++;
     const token = invite.token || inviteToken();
     const link = `${env.APP_URL.replace(/\/$/, '')}/cotacao/${token}`;
 
@@ -60,6 +90,8 @@ export async function dispatchQuotation(quotationId: string): Promise<DispatchRe
         phone: null,
         ok: false,
         reason: 'Fornecedor sem WhatsApp cadastrado',
+        distanceKm: alcance.distanciaKm,
+        inRange: alcance.atende,
       });
       continue;
     }
@@ -69,6 +101,9 @@ export async function dispatchQuotation(quotationId: string): Promise<DispatchRe
       buyerName: quotation.buyerCompany.name,
       quotationCode: quotation.code,
       quotationTitle: quotation.title,
+      priority: quotation.priority,
+      deliveryCity: quotation.deliveryCity,
+      attachmentCount: quotation._count.attachments,
       deadline,
       items: quotation.items.map((i) => ({
         position: i.position,
@@ -108,6 +143,8 @@ export async function dispatchQuotation(quotationId: string): Promise<DispatchRe
       supplierName: supplier.name,
       phone,
       ok: sent?.ok ?? false,
+      distanceKm: alcance.distanciaKm,
+      inRange: alcance.atende,
       ...(sent?.ok ? {} : { reason: sent?.error ?? 'A automação do WhatsApp não aceitou a mensagem' }),
     });
   }
@@ -120,8 +157,10 @@ export async function dispatchQuotation(quotationId: string): Promise<DispatchRe
       id: quotation.id,
       code: quotation.code,
       title: quotation.title,
+      priority: quotation.priority,
       deadline: quotation.deadline,
       deadlineFormatted: deadline,
+      deliveryCity: quotation.deliveryCity,
       buyer: { id: quotation.buyerCompanyId, name: quotation.buyerCompany.name },
       contact: quotation.createdBy,
       items: quotation.items.map((i) => ({
@@ -149,7 +188,7 @@ export async function dispatchQuotation(quotationId: string): Promise<DispatchRe
     }).catch((err) => logger.warn({ err }, 'falha ao notificar fornecedor'));
   }
 
-  return { quotationId: quotation.id, dispatched, n8nAccepted: n8nResult.ok };
+  return { quotationId: quotation.id, dispatched, outOfRange, n8nAccepted: n8nResult.ok };
 }
 
 /** Envia lembretes aos convites ainda sem resposta. Usado pelo cron do n8n. */

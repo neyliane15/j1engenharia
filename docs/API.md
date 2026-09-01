@@ -36,7 +36,7 @@ Login e cadastro têm limite de 20 tentativas a cada 15 minutos em produção.
 | POST | `/quotations` | comprador | cria com itens e convidados |
 | PATCH | `/quotations/:id` | comprador | edita (somente em rascunho) |
 | DELETE | `/quotations/:id` | comprador | exclui (nunca se aprovada) |
-| POST | `/quotations/:id/dispatch` | comprador | dispara no WhatsApp |
+| POST | `/quotations/:id/dispatch` | comprador | dispara no WhatsApp; a resposta traz `distanceKm` e `inRange` por fornecedor, e `outOfRange` no total |
 | POST | `/quotations/:id/suppliers` | comprador | acrescenta fornecedores e redispara |
 | GET | `/quotations/:id/comparison` | comprador | mapa comparativo item × fornecedor |
 | POST | `/quotations/:id/close` | comprador | encerra o prazo antes da hora |
@@ -53,16 +53,33 @@ POST /quotations
 {
   "title": "Hidráulica das prumadas — Bloco B",
   "deadline": "2026-09-20T18:00:00.000Z",
+  "priority": "DELIVERY_SPEED",
   "projectId": null,
-  "deliveryAddress": "Av. Serra Azul, 400 — Cotia/SP",
+  "deliveryCity": "Niterói",
+  "deliveryState": "RJ",
+  "deliveryAddress": "Rua Gavião Peixoto, 200 — Icaraí",
   "paymentTerms": "28 dias após entrega",
   "items": [
-    { "description": "Tubo PVC soldável 25mm 6m", "unit": "br", "quantity": 100, "brandRef": "Tigre" },
-    { "description": "Joelho 90 PVC 25mm", "unit": "un", "quantity": 400 }
+    {
+      "description": "Tubo PVC soldável 25mm barra 6m",
+      "catalogItemId": "uuid-do-catalogo",
+      "unit": "br",
+      "quantity": 100,
+      "brandRef": "Tigre"
+    },
+    { "description": "Joelho 90° PVC soldável 25mm", "unit": "un", "quantity": 400 }
   ],
   "supplierIds": ["uuid-1", "uuid-2", "uuid-3"]
 }
 ```
+
+`priority` aceita `PRICE` (padrão), `DELIVERY_SPEED` ou `PAYMENT_TERM`. Vai
+na mensagem ao fornecedor e ordena o ranking do comparativo.
+
+`deliveryCity` precisa ser um município da região de atuação para que as
+coordenadas sejam gravadas e o raio dos fornecedores possa ser calculado.
+
+`catalogItemId` é opcional: sem ele o item entra como texto livre.
 
 ### Aprovar
 
@@ -99,7 +116,7 @@ saiu de fato.
 | --- | --- | --- | --- |
 | GET | `/bids` | fornecedor/admin | propostas do fornecedor |
 | GET | `/bids/:id` | envolvidos | detalhe |
-| PUT | `/bids/quotation/:quotationId` | fornecedor | salva rascunho ou envia (`submit`) |
+| PUT | `/bids/quotation/:quotationId` | fornecedor | salva rascunho ou envia (`submit`); cada item aceita `discountPct` de 0 a 100 |
 | POST | `/bids/quotation/:quotationId/decline` | fornecedor | recusa participar |
 
 ## Dashboards
@@ -124,11 +141,39 @@ Aceitam `?from=`, `?to=` e `?months=` (padrão 12).
 
 Exigem `Authorization`. Devolvem o arquivo com `Content-Disposition`.
 
+## Catálogo e região
+
+| Método | Rota | Autenticação | Descrição |
+| --- | --- | --- | --- |
+| GET | `/catalog/regions` | aberta | municípios atendidos, agrupados por região |
+| GET | `/catalog/categories` | aberta | as 27 categorias, com a contagem de produtos |
+| GET | `/catalog/items?q=&categoryId=&limit=` | sessão | busca no nome e nos sinônimos; nome ranqueia acima de sinônimo |
+
+`/catalog/regions` fica aberta porque o formulário de cadastro precisa dela
+antes de existir sessão.
+
+## Anexos
+
+Fotos da obra e PDFs. Só o comprador da cotação envia e remove; o fornecedor
+convidado lê.
+
+| Método | Rota | Descrição |
+| --- | --- | --- |
+| GET | `/attachments/quotation/:quotationId` | lista os anexos |
+| POST | `/attachments/quotation/:quotationId` | envia (multipart, campo `files`, até 5 por vez) |
+| GET | `/attachments/:id` | serve o arquivo, com ETag e cache privado |
+| DELETE | `/attachments/:id` | remove do banco e do disco |
+
+Aceita `image/jpeg`, `image/png`, `image/webp` e `application/pdf`, até 15 MB
+por arquivo e 10 anexos por cotação. Imagens são redimensionadas para 1600px
+e recomprimidas em JPEG antes de gravar; o banco guarda só o caminho e os
+metadados.
+
 ## Empresas, obras e notificações
 
 | Método | Rota | Descrição |
 | --- | --- | --- |
-| GET | `/companies` | comprador e fornecedor só enxergam fornecedores ativos |
+| GET | `/companies?deliveryCity=&onlyInRange=` | comprador e fornecedor só enxergam fornecedores ativos; com `deliveryCity` cada item ganha `distanceKm` e `inRange` |
 | GET | `/companies/:id` | detalhe |
 | GET | `/companies/:id/performance` | histórico do fornecedor com o comprador logado |
 | POST/PATCH/DELETE | `/companies` | admin (o dono edita a própria) |

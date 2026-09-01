@@ -1,5 +1,5 @@
 import { prisma } from '../lib/prisma';
-import { average, percent, round, sum, toNumber } from '../utils/money';
+import { average, percent, round, sum, toNumber, type Numeric } from '../utils/money';
 
 /** Uma célula do comparativo: o preço de um fornecedor para um item. */
 export interface ComparisonCell {
@@ -7,7 +7,11 @@ export interface ComparisonCell {
   supplierId: string;
   supplierName: string;
   bidItemId: string | null;
+  /** Preço de tabela do fornecedor, antes do desconto da linha. */
+  listPrice: number;
+  /** Preço já com o desconto — é este que entra na comparação. */
   unitPrice: number;
+  discountPct: number;
   total: number;
   brand: string | null;
   available: boolean;
@@ -52,6 +56,7 @@ export interface ComparisonSupplier {
 }
 
 export interface ComparisonResult {
+  priority: 'PRICE' | 'DELIVERY_SPEED' | 'PAYMENT_TERM';
   rows: ComparisonRow[];
   suppliers: ComparisonSupplier[];
   totals: {
@@ -67,6 +72,17 @@ export interface ComparisonResult {
   };
 }
 
+/**
+ * Lê "30/60", "28 dias", "à vista" e devolve o maior prazo em dias.
+ * É aproximado de propósito: serve para ordenar, não para contabilizar.
+ */
+export function prazoEmDias(termo?: string | null): number {
+  if (!termo) return 0;
+  const numeros = termo.match(/\d{1,3}/g);
+  if (!numeros) return 0;
+  return Math.max(...numeros.map(Number).filter((n) => n <= 365));
+}
+
 const bidInclude = {
   supplierCompany: { select: { id: true, name: true, tradeName: true } },
   items: true,
@@ -77,6 +93,12 @@ const bidInclude = {
  * melhor preço por linha, ranking e potencial de economia.
  */
 export async function buildComparison(quotationId: string): Promise<ComparisonResult> {
+  const quotation = await prisma.quotation.findUnique({
+    where: { id: quotationId },
+    select: { priority: true },
+  });
+  const priority = quotation?.priority ?? 'PRICE';
+
   const [items, bids] = await Promise.all([
     prisma.quotationItem.findMany({ where: { quotationId }, orderBy: { position: 'asc' } }),
     prisma.bid.findMany({
@@ -95,13 +117,19 @@ export async function buildComparison(quotationId: string): Promise<ComparisonRe
     const cells: ComparisonCell[] = bids.map((bid) => {
       const bidItem = bid.items.find((bi) => bi.quotationItemId === item.id);
       const available = Boolean(bidItem?.available) && toNumber(bidItem?.unitPrice) > 0;
-      const unitPrice = available ? toNumber(bidItem?.unitPrice) : 0;
+      const listPrice = available ? toNumber(bidItem?.unitPrice) : 0;
+      const discountPct = available ? toNumber(bidItem?.discountPct) : 0;
+      // Comparar preço de tabela quando um deu desconto e o outro não seria
+      // comparar coisas diferentes: a linha vale pelo que o comprador paga.
+      const unitPrice = round(listPrice * (1 - discountPct / 100), 4);
       return {
         bidId: bid.id,
         supplierId: bid.supplierCompanyId,
         supplierName: bid.supplierCompany.tradeName || bid.supplierCompany.name,
         bidItemId: bidItem?.id ?? null,
+        listPrice,
         unitPrice,
+        discountPct,
         total: round(unitPrice * quantity),
         brand: bidItem?.brand ?? null,
         available,
@@ -189,9 +217,21 @@ export async function buildComparison(quotationId: string): Promise<ComparisonRe
         rankByTotal: 0,
       };
     })
+    // O ranking segue o que o comprador pediu para priorizar. Empate e
+    // proposta sem valor caem para o fim, sempre.
     .sort((a, b) => {
       if (a.total === 0) return 1;
       if (b.total === 0) return -1;
+      if (priority === 'DELIVERY_SPEED') {
+        const da = a.deliveryDays ?? Number.MAX_SAFE_INTEGER;
+        const db = b.deliveryDays ?? Number.MAX_SAFE_INTEGER;
+        if (da !== db) return da - db;
+      }
+      if (priority === 'PAYMENT_TERM') {
+        const pa = prazoEmDias(a.paymentTerms);
+        const pb = prazoEmDias(b.paymentTerms);
+        if (pa !== pb) return pb - pa; // quanto mais dias para pagar, melhor
+      }
       return a.total - b.total;
     })
     .map((s, idx) => ({ ...s, rankByTotal: idx + 1 }));
@@ -199,6 +239,7 @@ export async function buildComparison(quotationId: string): Promise<ComparisonRe
   const potentialSavings = averageTotal > 0 ? round(averageTotal - bestScenarioTotal) : 0;
 
   return {
+    priority,
     rows,
     suppliers,
     totals: {
@@ -248,20 +289,27 @@ export async function computeBaseline(
   return round(baseline);
 }
 
+/** Total de uma linha da proposta, já com o desconto do fornecedor. */
+export function totalDaLinha(unitPrice: Numeric, quantity: Numeric, discountPct: Numeric = 0): number {
+  const bruto = toNumber(unitPrice) * toNumber(quantity);
+  const desconto = Math.min(100, Math.max(0, toNumber(discountPct)));
+  return round(bruto * (1 - desconto / 100));
+}
+
 /** Recalcula os totais de uma proposta a partir dos seus itens. */
 export async function recalcBidTotals(bidId: string) {
   const bid = await prisma.bid.findUnique({ where: { id: bidId }, include: { items: true } });
   if (!bid) return null;
 
   for (const item of bid.items) {
-    const total = round(toNumber(item.unitPrice) * toNumber(item.quantity));
+    const total = totalDaLinha(item.unitPrice, item.quantity, item.discountPct);
     if (total !== toNumber(item.total)) {
       await prisma.bidItem.update({ where: { id: item.id }, data: { total } });
     }
   }
 
   const subtotal = sum(
-    bid.items.filter((i) => i.available).map((i) => round(toNumber(i.unitPrice) * toNumber(i.quantity))),
+    bid.items.filter((i) => i.available).map((i) => totalDaLinha(i.unitPrice, i.quantity, i.discountPct)),
   );
   const total = round(subtotal + toNumber(bid.freight) - toNumber(bid.discount));
 

@@ -19,6 +19,8 @@ import { publicRouter } from './modules/public/public.routes';
 import { webhooksRouter } from './modules/webhooks/webhooks.routes';
 import { projectsRouter } from './modules/projects/projects.routes';
 import { notificationsRouter } from './modules/notifications/notifications.routes';
+import { catalogRouter } from './modules/catalog/catalog.routes';
+import { attachmentsRouter } from './modules/attachments/attachments.routes';
 
 export function createApp() {
   const app = express();
@@ -104,6 +106,8 @@ export function createApp() {
   app.use('/dashboard', dashboardRouter);
   app.use('/exports', exportsRouter);
   app.use('/notifications', notificationsRouter);
+  app.use('/catalog', catalogRouter);
+  app.use('/attachments', attachmentsRouter);
   app.use('/public', publicRouter);
   app.use('/webhooks', webhooksRouter);
 

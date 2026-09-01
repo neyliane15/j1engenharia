@@ -112,3 +112,16 @@ describe('seleção de cotação por código', () => {
     expect(cmds).toHaveLength(3);
   });
 });
+
+describe('desconto por item', () => {
+  it('separa desconto de linha de desconto do total', () => {
+    expect(parseLine('DESCONTO 1 10%')).toEqual({ kind: 'itemDiscount', position: 1, percent: 10 });
+    expect(parseLine('desconto 3 7,5%')).toEqual({ kind: 'itemDiscount', position: 3, percent: 7.5 });
+    expect(parseLine('DESCONTO 2 15')).toEqual({ kind: 'itemDiscount', position: 2, percent: 15 });
+    expect(parseLine('DESCONTO 50')).toEqual({ kind: 'discount', value: 50 });
+  });
+
+  it('recusa porcentagem impossível', () => {
+    expect(parseLine('DESCONTO 1 150%')).toEqual({ kind: 'unknown', raw: 'DESCONTO 1 150%' });
+  });
+});

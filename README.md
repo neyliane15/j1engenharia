@@ -24,8 +24,10 @@ aprova, e o fornecedor vencedor baixa a lista dos produtos em `.xlsx`.
 | Perfil | O que faz |
 | --- | --- |
 | **Admin** | Libera acesso de comprador e fornecedor, gerencia empresas, usuários, vê todas as cotações, logs de WhatsApp e auditoria. Autorização total. |
-| **Comprador** | Cria cotações, escolhe fornecedores, dispara no WhatsApp, compara propostas item a item, aprova e acompanha economia gerada. |
-| **Fornecedor** | Recebe cotações, responde pelo WhatsApp ou pela web, acompanha faturamento aprovado por cliente e baixa os produtos vencedores em XLSX. |
+| **Comprador** | Cria cotações a partir de um catálogo de 400 produtos, define o que priorizar (preço, entrega ou prazo), anexa fotos da obra, escolhe fornecedores que atendem a cidade de entrega, dispara no WhatsApp, compara item a item e aprova. |
+| **Fornecedor** | Declara até onde entrega, recebe as cotações do seu raio, responde pelo WhatsApp ou pela web com desconto por item, acompanha o faturamento aprovado e baixa os produtos vencedores em XLSX. |
+
+**Região de atuação:** Niterói, Região dos Lagos e Rio de Janeiro — 32 municípios.
 
 ## Stack
 

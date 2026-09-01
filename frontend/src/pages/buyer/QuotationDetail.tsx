@@ -28,7 +28,14 @@ import { Table, TableWrap, Td, Th, Tr } from '@/components/ui/Table';
 import { api, ApiError, downloadFile } from '@/lib/api';
 import { formatDate, formatDateTime, formatDeadline, formatMoney, formatNumber, formatPercent } from '@/lib/format';
 import { cn } from '@/lib/utils';
-import type { Comparison, Quotation } from '@/types';
+import { AttachmentUploader } from '@/components/AttachmentUploader';
+import type { Comparison, Quotation, QuotationPriority } from '@/types';
+
+const PRIORIDADE_LABEL: Record<QuotationPriority, string> = {
+  PRICE: 'Menor preço',
+  DELIVERY_SPEED: 'Entrega mais rápida',
+  PAYMENT_TERM: 'Melhor prazo de pagamento',
+};
 
 type AwardMode = 'single' | 'split';
 
@@ -163,8 +170,13 @@ export default function QuotationDetail() {
     <>
       <PageHeader
         title={quotation.title}
-        description={`${quotation.code} · criada em ${formatDate(quotation.createdAt)}${quotation.project ? ` · ${quotation.project.name}` : ''}`}
-        badge={<QuotationStatusBadge status={quotation.status} />}
+        description={`${quotation.code} · criada em ${formatDate(quotation.createdAt)}${quotation.project ? ` · ${quotation.project.name}` : ''}${quotation.deliveryCity ? ` · entrega em ${quotation.deliveryCity}` : ''}`}
+        badge={
+          <>
+            <QuotationStatusBadge status={quotation.status} />
+            <Badge tone="outline">Prioriza: {PRIORIDADE_LABEL[quotation.priority]}</Badge>
+          </>
+        }
         action={
           <>
             <Link to="/comprador/cotacoes" className={linkButtonClass({ variant: 'outline' })}>
@@ -282,7 +294,7 @@ export default function QuotationDetail() {
           title="Mapa comparativo"
           description={
             comparison?.suppliers.length
-              ? `${comparison.suppliers.length} propostas · o fundo tingido marca o melhor preço de cada item`
+              ? `${comparison.suppliers.length} propostas · ranking por ${PRIORIDADE_LABEL[comparison.priority].toLowerCase()} · o fundo tingido marca o melhor preço de cada item`
               : 'Assim que as propostas chegarem, o comparativo aparece aqui'
           }
         />
@@ -360,6 +372,11 @@ export default function QuotationDetail() {
                             className={cn(cell.isBest && 'bg-state-approved font-medium text-state-approved-foreground')}
                           >
                             {formatMoney(cell.unitPrice)}
+                            {cell.discountPct > 0 && (
+                              <span className="mt-1 block text-[11px] font-normal text-muted-foreground">
+                                <span className="line-through">{formatMoney(cell.listPrice)}</span> −{cell.discountPct}%
+                              </span>
+                            )}
                             {!cell.isBest && cell.deltaToBestPct > 0 && (
                               <span className="mt-1 block text-[11px] font-normal text-muted-foreground">
                                 +{formatPercent(cell.deltaToBestPct, 0)}
@@ -388,7 +405,13 @@ export default function QuotationDetail() {
                     <td key={s.bidId} className="num px-4 py-3 text-right text-sm font-medium">
                       {formatMoney(s.total)}
                       {s.rankByTotal === 1 && (
-                        <span className="mt-1 block text-[11px] font-normal text-sidebar-primary">menor total</span>
+                        <span className="mt-1 block text-[11px] font-normal text-sidebar-primary">
+                          {comparison.priority === 'DELIVERY_SPEED'
+                            ? 'entrega mais rápida'
+                            : comparison.priority === 'PAYMENT_TERM'
+                              ? 'melhor prazo'
+                              : 'menor total'}
+                        </span>
                       )}
                     </td>
                   ))}
@@ -430,6 +453,17 @@ export default function QuotationDetail() {
             </div>
           </CardBody>
         ) : null}
+      </Card>
+
+      {/* Fotos e documentos da obra */}
+      <Card className="mt-6">
+        <CardHeader
+          title="Fotos e documentos da obra"
+          description="O que você anexar aqui o fornecedor vê junto da cotação"
+        />
+        <CardBody>
+          <AttachmentUploader quotationId={id} canEdit={quotation.status !== 'AWARDED' && quotation.status !== 'CANCELLED'} />
+        </CardBody>
       </Card>
 
       {/* Fornecedores convidados */}

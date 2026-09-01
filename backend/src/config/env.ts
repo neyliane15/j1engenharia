@@ -24,6 +24,9 @@ const schema = z.object({
   SEED_ADMIN_EMAIL: z.string().email().default('admin@emptra.com.br'),
   SEED_ADMIN_PASSWORD: z.string().default('Emptra@2025'),
 
+  /** Onde os anexos ficam no disco. Nunca no banco. */
+  UPLOAD_DIR: z.string().default('./uploads'),
+
   RATE_LIMIT_WINDOW_MS: z.coerce.number().default(60_000),
   RATE_LIMIT_MAX: z.coerce.number().default(300),
 });

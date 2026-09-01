@@ -15,3 +15,4 @@ backend/tmp/
 frontend/.vite/
 n8n/data/
 postgres-data/
+backend/uploads/

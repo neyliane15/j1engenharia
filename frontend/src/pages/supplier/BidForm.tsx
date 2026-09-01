@@ -14,7 +14,14 @@ import { Table, TableWrap, Td, Th, Tr } from '@/components/ui/Table';
 import { api, ApiError } from '@/lib/api';
 import { formatDateTime, formatMoney, formatNumber, parseMoneyInput } from '@/lib/format';
 import { cn } from '@/lib/utils';
-import type { Bid, Quotation, QuotationInvite } from '@/types';
+import { AttachmentUploader } from '@/components/AttachmentUploader';
+import type { Bid, Quotation, QuotationInvite, QuotationPriority } from '@/types';
+
+const PRIORIDADE_LABEL: Record<QuotationPriority, string> = {
+  PRICE: 'menor preço',
+  DELIVERY_SPEED: 'entrega mais rápida',
+  PAYMENT_TERM: 'melhor prazo de pagamento',
+};
 
 interface Line {
   quotationItemId: string;
@@ -24,6 +31,8 @@ interface Line {
   quantity: number;
   brandRef: string | null;
   unitPrice: string;
+  /** Desconto que o fornecedor concede nesta linha, em porcentagem. */
+  discountPct: string;
   brand: string;
   available: boolean;
 }
@@ -62,6 +71,7 @@ export default function BidForm() {
           quantity: Number(item.quantity),
           brandRef: item.brandRef ?? null,
           unitPrice: bidItem && Number(bidItem.unitPrice) > 0 ? String(Number(bidItem.unitPrice)) : '',
+          discountPct: bidItem && Number(bidItem.discountPct) > 0 ? String(Number(bidItem.discountPct)) : '',
           brand: bidItem?.brand ?? item.brandRef ?? '',
           available: bidItem ? bidItem.available : true,
         };
@@ -76,11 +86,14 @@ export default function BidForm() {
     }
   }, [data]);
 
+  /** Total de uma linha já com o desconto — a mesma conta do servidor. */
+  const totalDaLinha = (l: Line) => {
+    const desconto = Math.min(100, Math.max(0, parseMoneyInput(l.discountPct)));
+    return parseMoneyInput(l.unitPrice) * l.quantity * (1 - desconto / 100);
+  };
+
   const totals = useMemo(() => {
-    const subtotal = lines.reduce(
-      (acc, l) => (l.available ? acc + parseMoneyInput(l.unitPrice) * l.quantity : acc),
-      0,
-    );
+    const subtotal = lines.reduce((acc, l) => (l.available ? acc + totalDaLinha(l) : acc), 0);
     const f = parseMoneyInput(freight);
     const d = parseMoneyInput(discount);
     const missing = lines.filter((l) => l.available && parseMoneyInput(l.unitPrice) <= 0).length;
@@ -99,6 +112,7 @@ export default function BidForm() {
         items: lines.map((l) => ({
           quotationItemId: l.quotationItemId,
           unitPrice: parseMoneyInput(l.unitPrice),
+          discountPct: Math.min(100, Math.max(0, parseMoneyInput(l.discountPct))),
           brand: l.brand || undefined,
           available: l.available,
         })),
@@ -160,7 +174,14 @@ export default function BidForm() {
         </div>
       )}
 
-      <div className="mb-6 rounded-md border border-primary/25 bg-primary/[0.05] px-4 py-3">
+      <div className="mb-6 rounded-lg border border-border bg-secondary/40 px-4 py-3">
+        <p className="text-sm text-foreground">
+          Este comprador vai decidir por <strong className="font-medium">{PRIORIDADE_LABEL[quotation.priority]}</strong>
+          {quotation.deliveryCity ? ` · entrega em ${quotation.deliveryCity}` : ''}.
+        </p>
+      </div>
+
+      <div className="mb-6 rounded-lg border border-primary/25 bg-primary/[0.05] px-4 py-3">
         <p className="flex items-start gap-2 text-sm text-foreground">
           <MessageSquareText className="mt-1 h-4 w-4 shrink-0 text-primary" />
           <span>
@@ -181,6 +202,7 @@ export default function BidForm() {
                   <Th>Item</Th>
                   <Th numeric>Quantidade</Th>
                   <Th numeric className="min-w-[140px]">Preço unitário</Th>
+                  <Th numeric className="min-w-[104px]">Desconto %</Th>
                   <Th className="min-w-[130px]">Marca</Th>
                   <Th numeric>Total</Th>
                   <Th>Tenho</Th>
@@ -213,6 +235,18 @@ export default function BidForm() {
                           wrapperClassName="w-full"
                         />
                       </Td>
+                      <Td numeric>
+                        <Input
+                          numeric
+                          inputMode="decimal"
+                          placeholder="0"
+                          disabled={locked || !l.available}
+                          value={l.discountPct}
+                          onChange={(e) => updateLine(l.quotationItemId, { discountPct: e.target.value })}
+                          className="h-9"
+                          wrapperClassName="w-full"
+                        />
+                      </Td>
                       <Td>
                         <Input
                           placeholder="Marca"
@@ -224,7 +258,18 @@ export default function BidForm() {
                         />
                       </Td>
                       <Td numeric className="whitespace-nowrap font-medium">
-                        {l.available && price > 0 ? formatMoney(price * l.quantity) : '—'}
+                        {l.available && price > 0 ? (
+                          <>
+                            {formatMoney(totalDaLinha(l))}
+                            {parseMoneyInput(l.discountPct) > 0 && (
+                              <span className="mt-1 block text-[11px] font-normal text-muted-foreground line-through">
+                                {formatMoney(price * l.quantity)}
+                              </span>
+                            )}
+                          </>
+                        ) : (
+                          '—'
+                        )}
                       </Td>
                       <Td>
                         <label className="flex cursor-pointer items-center gap-2">
@@ -354,6 +399,13 @@ export default function BidForm() {
                 </Button>
               </div>
             )}
+          </Card>
+
+          <Card>
+            <CardHeader title="Fotos e documentos da obra" />
+            <CardBody>
+              <AttachmentUploader quotationId={id} />
+            </CardBody>
           </Card>
 
           {quotation.description && (

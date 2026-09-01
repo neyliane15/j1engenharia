@@ -160,6 +160,7 @@ async function buildSummary(bidId: string): Promise<T.SummaryData> {
     quantity: toNumber(i.quantity),
     unit: i.quotationItem.unit,
     unitPrice: toNumber(i.unitPrice),
+    discountPct: toNumber(i.discountPct),
     total: toNumber(i.total),
     available: i.available && toNumber(i.unitPrice) > 0,
     brand: i.brand,
@@ -264,8 +265,21 @@ async function applyCommands(bidId: string, quotationId: string, commands: Parse
         break;
       case 'discount':
         await prisma.bid.update({ where: { id: bidId }, data: { discount: cmd.value } });
-        applied.push('desconto');
+        applied.push('desconto no total');
         break;
+      case 'itemDiscount': {
+        const item = byPosition.get(cmd.position);
+        if (!item) {
+          invalidPositions.push(cmd.position);
+          break;
+        }
+        await prisma.bidItem.update({
+          where: { bidId_quotationItemId: { bidId, quotationItemId: item.id } },
+          data: { discountPct: cmd.percent },
+        });
+        applied.push(`desconto de ${cmd.percent}% no item ${cmd.position}`);
+        break;
+      }
       case 'submit':
         submit = true;
         break;

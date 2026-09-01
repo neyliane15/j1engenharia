@@ -9,6 +9,8 @@ import { nextQuotationCode, inviteToken } from '../../utils/code';
 import { normalizePhone } from '../../utils/phone';
 import { audit } from '../../utils/audit';
 import { buildComparison } from '../../services/quotation.service';
+import { coordenadasDaCidade, distanciaEntre } from '../../utils/geo';
+import { apagarPastaDaCotacao } from '../../services/storage.service';
 import { dispatchQuotation } from '../../services/dispatch.service';
 import { awardQuotation } from '../../services/award.service';
 import { buildComparisonWorkbook } from '../../services/xlsx.service';
@@ -20,6 +22,8 @@ quotationsRouter.use(authenticate, requireCompany);
 
 const itemSchema = z.object({
   description: z.string().min(2, 'Descreva o item'),
+  /** Quando o item veio do catálogo, guardamos a referência. */
+  catalogItemId: z.string().uuid().optional().nullable(),
   sku: z.string().optional().nullable(),
   unit: z.string().min(1).max(10).default('un'),
   quantity: z.number().positive('Quantidade precisa ser maior que zero'),
@@ -33,6 +37,10 @@ const createSchema = z.object({
   description: z.string().optional().nullable(),
   projectId: z.string().uuid().optional().nullable(),
   deadline: z.coerce.date().refine((d) => d.getTime() > Date.now(), 'O prazo precisa ser no futuro'),
+  /** O que o comprador quer priorizar: menor preço, entrega ou prazo. */
+  priority: z.enum(['PRICE', 'DELIVERY_SPEED', 'PAYMENT_TERM']).default('PRICE'),
+  deliveryCity: z.string().max(80).optional().nullable(),
+  deliveryState: z.string().max(2).optional().nullable(),
   deliveryAddress: z.string().optional().nullable(),
   deliveryDate: z.coerce.date().optional().nullable(),
   paymentTerms: z.string().optional().nullable(),
@@ -74,6 +82,18 @@ async function loadAccessible(req: { user?: Express.AuthUser }, id: string) {
         include: {
           supplierCompany: { select: { id: true, name: true, tradeName: true } },
           items: { include: { quotationItem: true } },
+        },
+      },
+      attachments: {
+        orderBy: { createdAt: 'asc' },
+        select: {
+          id: true,
+          filename: true,
+          mimeType: true,
+          size: true,
+          width: true,
+          height: true,
+          createdAt: true,
         },
       },
     },
@@ -210,6 +230,10 @@ quotationsRouter.post(
         })
       : [];
 
+    // O ponto de entrega vem da cidade escolhida; é o que permite achar
+    // fornecedores dentro do raio de atendimento.
+    const entrega = coordenadasDaCidade(data.deliveryCity);
+
     const code = await nextQuotationCode();
 
     const quotation = await prisma.quotation.create({
@@ -221,6 +245,11 @@ quotationsRouter.post(
         createdById: req.user!.id,
         projectId: data.projectId ?? null,
         deadline: data.deadline,
+        priority: data.priority,
+        deliveryCity: data.deliveryCity ?? null,
+        deliveryState: data.deliveryState ?? null,
+        deliveryLat: entrega?.latitude ?? null,
+        deliveryLng: entrega?.longitude ?? null,
         deliveryAddress: data.deliveryAddress ?? null,
         deliveryDate: data.deliveryDate ?? null,
         paymentTerms: data.paymentTerms ?? null,
@@ -229,6 +258,7 @@ quotationsRouter.post(
           create: data.items.map((item, index) => ({
             position: index + 1,
             description: item.description.trim(),
+            catalogItemId: item.catalogItemId ?? null,
             sku: item.sku ?? null,
             unit: item.unit,
             quantity: item.quantity,
@@ -312,6 +342,15 @@ quotationsRouter.patch(
           ...(data.description !== undefined ? { description: data.description } : {}),
           ...(data.projectId !== undefined ? { projectId: data.projectId } : {}),
           ...(data.deadline ? { deadline: data.deadline } : {}),
+          ...(data.priority ? { priority: data.priority } : {}),
+          ...(data.deliveryCity !== undefined
+            ? {
+                deliveryCity: data.deliveryCity,
+                deliveryState: data.deliveryState ?? null,
+                deliveryLat: coordenadasDaCidade(data.deliveryCity)?.latitude ?? null,
+                deliveryLng: coordenadasDaCidade(data.deliveryCity)?.longitude ?? null,
+              }
+            : {}),
           ...(data.deliveryAddress !== undefined ? { deliveryAddress: data.deliveryAddress } : {}),
           ...(data.deliveryDate !== undefined ? { deliveryDate: data.deliveryDate } : {}),
           ...(data.paymentTerms !== undefined ? { paymentTerms: data.paymentTerms } : {}),
@@ -335,6 +374,8 @@ quotationsRouter.delete(
     const quotation = await loadAccessible(req, id);
     if (quotation.status === 'AWARDED') throw BadRequest('Uma cotação aprovada não pode ser excluída');
     await prisma.quotation.delete({ where: { id } });
+    // O banco perde o registro por cascata; o disco precisa ser limpo à mão.
+    await apagarPastaDaCotacao(id);
     await audit(req, 'quotation.delete', 'Quotation', id, { code: quotation.code });
     res.status(204).end();
   }),

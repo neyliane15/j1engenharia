@@ -31,12 +31,20 @@ enum CompanyType {
   SUPPLIER
 }
 
+/// O que o comprador quer priorizar nesta cotação. Vai na mensagem ao
+/// fornecedor e ordena o comparativo.
+enum QuotationPriority {
+  PRICE // menor preço
+  DELIVERY_SPEED // entrega mais rápida
+  PAYMENT_TERM // melhor prazo de pagamento
+}
+
 enum QuotationStatus {
-  DRAFT      // rascunho, ainda não enviada
-  SENT       // disparada aos fornecedores
-  RECEIVING  // já há propostas chegando
-  CLOSED     // prazo encerrado, em análise
-  AWARDED    // aprovada / adjudicada
+  DRAFT // rascunho, ainda não enviada
+  SENT // disparada aos fornecedores
+  RECEIVING // já há propostas chegando
+  CLOSED // prazo encerrado, em análise
+  AWARDED // aprovada / adjudicada
   CANCELLED
 }
 
@@ -50,9 +58,9 @@ enum InviteStatus {
 }
 
 enum BidStatus {
-  DRAFT      // fornecedor começou a responder (via WhatsApp ou web)
-  SUBMITTED  // proposta enviada
-  APPROVED   // venceu (total ou parcialmente)
+  DRAFT // fornecedor começou a responder (via WhatsApp ou web)
+  SUBMITTED // proposta enviada
+  APPROVED // venceu (total ou parcialmente)
   REJECTED
   WITHDRAWN
 }
@@ -101,6 +109,10 @@ model Company {
   city      String?
   state     String?
   address   String?
+  /// Coordenadas do centro do município, preenchidas a partir da cidade.
+  /// Base do cálculo de raio de atendimento.
+  latitude  Decimal?    @db.Decimal(9, 6)
+  longitude Decimal?    @db.Decimal(9, 6)
   logoUrl   String?
   active    Boolean     @default(true)
   createdAt DateTime    @default(now())
@@ -110,27 +122,29 @@ model Company {
   supplierProfile SupplierProfile?
   projects        Project[]
 
-  quotationsAsBuyer  Quotation[]       @relation("BuyerQuotations")
-  invitesAsSupplier  QuotationInvite[] @relation("SupplierInvites")
-  bidsAsSupplier     Bid[]             @relation("SupplierBids")
-  awardsAsSupplier   Award[]           @relation("SupplierAwards")
+  quotationsAsBuyer Quotation[]       @relation("BuyerQuotations")
+  invitesAsSupplier QuotationInvite[] @relation("SupplierInvites")
+  bidsAsSupplier    Bid[]             @relation("SupplierBids")
+  awardsAsSupplier  Award[]           @relation("SupplierAwards")
 
   @@index([type, active])
   @@map("companies")
 }
 
 model SupplierProfile {
-  id           String   @id @default(uuid())
-  companyId    String   @unique
-  categories   String[] @default([])
-  description  String?
-  deliveryDays Int      @default(7)
-  minOrder     Decimal? @db.Decimal(14, 2)
-  paymentTerms String?
-  rating       Decimal  @default(0) @db.Decimal(3, 2)
-  autoReply    Boolean  @default(true) // participa do fluxo automático de WhatsApp
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id              String   @id @default(uuid())
+  companyId       String   @unique
+  categories      String[] @default([])
+  description     String?
+  deliveryDays    Int      @default(7)
+  /// Até quantos quilômetros da sua base o fornecedor entrega.
+  serviceRadiusKm Int      @default(50)
+  minOrder        Decimal? @db.Decimal(14, 2)
+  paymentTerms    String?
+  rating          Decimal  @default(0) @db.Decimal(3, 2)
+  autoReply       Boolean  @default(true) // participa do fluxo automático de WhatsApp
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
   company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
 
@@ -152,26 +166,27 @@ model User {
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt
 
-  company           Company?         @relation(fields: [companyId], references: [id], onDelete: SetNull)
-  quotationsCreated Quotation[]      @relation("QuotationAuthor")
-  awardsGranted     Award[]          @relation("AwardedBy")
+  company           Company?       @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  quotationsCreated Quotation[]    @relation("QuotationAuthor")
+  awardsGranted     Award[]        @relation("AwardedBy")
   refreshTokens     RefreshToken[]
   notifications     Notification[]
   auditLogs         AuditLog[]
+  attachments       Attachment[]   @relation("AttachmentAuthor")
 
   @@index([role, status])
   @@map("users")
 }
 
 model RefreshToken {
-  id        String   @id @default(uuid())
-  token     String   @unique
+  id        String    @id @default(uuid())
+  token     String    @unique
   userId    String
   expiresAt DateTime
   revokedAt DateTime?
   userAgent String?
   ip        String?
-  createdAt DateTime @default(now())
+  createdAt DateTime  @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -201,34 +216,41 @@ model Project {
 // ── Cotação ───────────────────────────────────────────────────
 
 model Quotation {
-  id              String          @id @default(uuid())
-  code            String          @unique // COT-2025-0001
+  id              String            @id @default(uuid())
+  code            String            @unique // COT-2025-0001
   title           String
   description     String?
-  status          QuotationStatus @default(DRAFT)
+  status          QuotationStatus   @default(DRAFT)
   buyerCompanyId  String
   createdById     String
   projectId       String?
   deadline        DateTime
+  priority        QuotationPriority @default(PRICE)
   deliveryAddress String?
+  deliveryCity    String?
+  deliveryState   String?
+  /// Ponto de entrega, usado para achar fornecedores no raio.
+  deliveryLat     Decimal?          @db.Decimal(9, 6)
+  deliveryLng     Decimal?          @db.Decimal(9, 6)
   deliveryDate    DateTime?
   paymentTerms    String?
   notes           String?
   sentAt          DateTime?
   closedAt        DateTime?
   awardedAt       DateTime?
-  createdAt       DateTime        @default(now())
-  updatedAt       DateTime        @updatedAt
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
 
-  buyerCompany Company         @relation("BuyerQuotations", fields: [buyerCompanyId], references: [id], onDelete: Cascade)
-  createdBy    User            @relation("QuotationAuthor", fields: [createdById], references: [id])
-  project      Project?        @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  buyerCompany Company  @relation("BuyerQuotations", fields: [buyerCompanyId], references: [id], onDelete: Cascade)
+  createdBy    User     @relation("QuotationAuthor", fields: [createdById], references: [id])
+  project      Project? @relation(fields: [projectId], references: [id], onDelete: SetNull)
 
-  items    QuotationItem[]
-  invites  QuotationInvite[]
-  bids     Bid[]
-  awards   Award[]
-  messages WhatsAppMessage[]
+  items       QuotationItem[]
+  invites     QuotationInvite[]
+  bids        Bid[]
+  awards      Award[]
+  messages    WhatsAppMessage[]
+  attachments Attachment[]
 
   @@index([buyerCompanyId, status])
   @@index([status, deadline])
@@ -236,21 +258,25 @@ model Quotation {
 }
 
 model QuotationItem {
-  id          String   @id @default(uuid())
-  quotationId String
-  position    Int
-  description String
-  sku         String?
-  unit        String   @default("un")
-  quantity    Decimal  @db.Decimal(14, 3)
-  brandRef    String?
-  targetPrice Decimal? @db.Decimal(14, 2)
-  notes       String?
-  createdAt   DateTime @default(now())
+  id            String   @id @default(uuid())
+  quotationId   String
+  position      Int
+  description   String
+  /// Preenchido quando o item veio do catálogo — permite comparar preço
+  /// do mesmo produto entre cotações diferentes.
+  catalogItemId String?
+  sku           String?
+  unit          String   @default("un")
+  quantity      Decimal  @db.Decimal(14, 3)
+  brandRef      String?
+  targetPrice   Decimal? @db.Decimal(14, 2)
+  notes         String?
+  createdAt     DateTime @default(now())
 
-  quotation  Quotation   @relation(fields: [quotationId], references: [id], onDelete: Cascade)
-  bidItems   BidItem[]
-  awardItems AwardItem[]
+  quotation   Quotation    @relation(fields: [quotationId], references: [id], onDelete: Cascade)
+  catalogItem CatalogItem? @relation(fields: [catalogItemId], references: [id], onDelete: SetNull)
+  bidItems    BidItem[]
+  awardItems  AwardItem[]
 
   @@unique([quotationId, position])
   @@index([quotationId])
@@ -321,7 +347,10 @@ model BidItem {
   bidId           String
   quotationItemId String
   unitPrice       Decimal  @default(0) @db.Decimal(14, 4)
+  /// Desconto que o fornecedor concede neste item, em porcentagem.
+  discountPct     Decimal  @default(0) @db.Decimal(5, 2)
   quantity        Decimal  @db.Decimal(14, 3)
+  /// Total já com o desconto aplicado.
   total           Decimal  @default(0) @db.Decimal(14, 2)
   brand           String?
   available       Boolean  @default(true)
@@ -382,6 +411,66 @@ model AwardItem {
   @@map("award_items")
 }
 
+// ── Catálogo de materiais ─────────────────────────────────────
+
+model Category {
+  id       String  @id @default(uuid())
+  name     String
+  slug     String  @unique
+  position Int     @default(0)
+  active   Boolean @default(true)
+
+  items CatalogItem[]
+
+  @@index([position])
+  @@map("categories")
+}
+
+model CatalogItem {
+  id         String   @id @default(uuid())
+  categoryId String
+  name       String
+  unit       String   @default("un")
+  /// Sinônimos e termos de busca, para o comprador achar pelo nome que usa.
+  keywords   String[] @default([])
+  active     Boolean  @default(true)
+  createdAt  DateTime @default(now())
+
+  category       Category        @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  quotationItems QuotationItem[]
+
+  @@unique([categoryId, name])
+  @@index([name])
+  @@map("catalog_items")
+}
+
+// ── Anexos ────────────────────────────────────────────────────
+
+/// Foto ou PDF que o comprador anexa à cotação.
+///
+/// O arquivo NUNCA entra no banco: fica no disco em UPLOAD_DIR e aqui só
+/// guardamos o caminho e os metadados. Imagens são reduzidas e recomprimidas
+/// no upload, então o armazenamento cresce devagar.
+model Attachment {
+  id           String   @id @default(uuid())
+  quotationId  String
+  filename     String // nome original, mostrado ao usuário
+  storedName   String   @unique // nome no disco
+  mimeType     String
+  size         Int // bytes já comprimidos
+  originalSize Int // bytes recebidos, para medir a economia
+  width        Int?
+  height       Int?
+  uploadedById String?
+  createdAt    DateTime @default(now())
+
+  quotation  Quotation @relation(fields: [quotationId], references: [id], onDelete: Cascade)
+  uploadedBy User?     @relation("AttachmentAuthor", fields: [uploadedById], references: [id], onDelete: SetNull)
+
+  @@index([quotationId])
+  @@map("attachments")
+}
+
 // ── WhatsApp ──────────────────────────────────────────────────
 
 model WhatsAppMessage {
@@ -439,13 +528,13 @@ model Notification {
 }
 
 model AuditLog {
-  id       String   @id @default(uuid())
-  userId   String?
-  action   String
-  entity   String
-  entityId String?
-  meta     Json?
-  ip       String?
+  id        String   @id @default(uuid())
+  userId    String?
+  action    String
+  entity    String
+  entityId  String?
+  meta      Json?
+  ip        String?
   createdAt DateTime @default(now())
 
   user User? @relation(fields: [userId], references: [id], onDelete: SetNull)

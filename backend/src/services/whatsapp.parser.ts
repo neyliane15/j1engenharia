@@ -9,6 +9,7 @@ export type ParsedCommand =
   | { kind: 'payment'; terms: string }
   | { kind: 'freight'; value: number }
   | { kind: 'discount'; value: number }
+  | { kind: 'itemDiscount'; position: number; percent: number }
   | { kind: 'submit' }
   | { kind: 'decline'; reason?: string }
   | { kind: 'summary' }
@@ -80,8 +81,21 @@ export function parseLine(line: string): ParsedCommand | null {
     if (v !== null && v >= 0) return { kind: 'freight', value: v };
   }
 
-  // DESCONTO 50
-  const discount = raw.match(/^desconto\s+(.+)$/i);
+  // DESCONTO 1 10%  → desconto por item, em porcentagem.
+  // Com dois argumentos a intenção é essa; porcentagem inválida vira
+  // "não entendi", nunca desconto no total — um dígito a mais não pode
+  // virar abatimento na proposta inteira.
+  const itemDiscount = raw.match(/^desconto\s+(\d{1,3})\s+([\d.,]+)\s*%?$/i);
+  if (itemDiscount) {
+    const percent = parseBRLNumber(itemDiscount[2]);
+    if (percent !== null && percent >= 0 && percent <= 100) {
+      return { kind: 'itemDiscount', position: Number(itemDiscount[1]), percent };
+    }
+    return { kind: 'unknown', raw };
+  }
+
+  // DESCONTO 50 → desconto no total da proposta
+  const discount = raw.match(/^desconto\s+([\d.,\sR$]+)$/i);
   if (discount) {
     const v = parseBRLNumber(discount[1]);
     if (v !== null && v >= 0) return { kind: 'discount', value: v };
