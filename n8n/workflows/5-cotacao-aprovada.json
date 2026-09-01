@@ -1,0 +1,58 @@
+{
+  "name": "Emptra · 5 · Cotação aprovada",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "emptra-cotacao-aprovada",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "id": "webhook-aprovação",
+      "name": "Webhook aprovação",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -640,
+        300
+      ],
+      "webhookId": "emptra-cotacao-aprovada"
+    },
+    {
+      "parameters": {
+        "jsCode": "// A API já avisou vencedores e perdedores no WhatsApp.\n// Este workflow é o gancho para o que vier depois: emitir pedido\n// no ERP, avisar o financeiro, alimentar um BI.\nconst body = $input.first().json.body ?? $input.first().json;\nreturn [{ json: {\n  ok: true,\n  quotation: body.quotation?.code ?? null,\n  winners: (body.awards ?? []).map((a) => ({ supplier: a.supplierName, total: a.total, xlsx: a.downloadUrl })),\n  totals: body.totals ?? null,\n} }];"
+      },
+      "id": "resumo-da-aprovação",
+      "name": "Resumo da aprovação",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -400,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook aprovação": {
+      "main": [
+        [
+          {
+            "node": "Resumo da aprovação",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "America/Sao_Paulo"
+  },
+  "active": false,
+  "tags": [
+    {
+      "name": "emptra"
+    }
+  ]
+}

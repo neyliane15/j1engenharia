@@ -1,0 +1,58 @@
+{
+  "name": "Emptra · 3 · Disparo de cotação",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "emptra-cotacao-disparo",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "id": "webhook-disparo",
+      "name": "Webhook disparo",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -640,
+        300
+      ],
+      "webhookId": "emptra-cotacao-disparo"
+    },
+    {
+      "parameters": {
+        "jsCode": "// A API já enfileirou uma mensagem por convite.\n// Aqui fica o log agregado — útil para auditoria e para plugar\n// integrações extras (CRM, e-mail, Slack) sem tocar no backend.\nconst body = $input.first().json.body ?? $input.first().json;\nconst invites = body.invites ?? [];\nconsole.log(`[emptra] cotacao ${body.quotation?.code} disparada para ${invites.length} fornecedor(es)`);\nreturn [{ json: { ok: true, code: body.quotation?.code ?? null, invites: invites.length } }];"
+      },
+      "id": "registrar-disparo",
+      "name": "Registrar disparo",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -420,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook disparo": {
+      "main": [
+        [
+          {
+            "node": "Registrar disparo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "America/Sao_Paulo"
+  },
+  "active": false,
+  "tags": [
+    {
+      "name": "emptra"
+    }
+  ]
+}

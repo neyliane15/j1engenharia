@@ -1,0 +1,167 @@
+/* Emptra — tokens de design
+   Formato HSL sem vírgulas, compatível com shadcn/ui e Tailwind.
+   Não use hex solto em componente. Sempre a variável. */
+
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500&family=Newsreader:opsz,wght@6..72,500;6..72,600&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Superfícies */
+    --background: 160 23% 97%;        /* #F7FAF9 */
+    --foreground: 170 38% 6%;         /* #0A1614 */
+    --card: 0 0% 100%;
+    --card-foreground: 170 38% 6%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 170 38% 6%;
+
+    /* Marca */
+    --primary: 173 80% 36%;           /* #12A594 */
+    --primary-foreground: 0 0% 100%;
+    --brand-deep: 175 59% 12%;        /* #0C2F2C */
+    --brand-deep-foreground: 165 40% 95%;
+
+    /* Neutros */
+    --secondary: 165 20% 92%;         /* #E7EFED */
+    --secondary-foreground: 175 59% 12%;
+    --muted: 165 20% 92%;
+    --muted-foreground: 173 7% 46%;   /* #6E7E7C */
+    --accent: 165 20% 92%;
+    --accent-foreground: 175 59% 12%;
+
+    /* Estados */
+    --destructive: 4 53% 49%;         /* #C0453B */
+    --destructive-foreground: 0 0% 100%;
+    --warning: 37 73% 41%;            /* #B4791C */
+    --warning-foreground: 0 0% 100%;
+    --success: 173 80% 36%;
+    --success-foreground: 0 0% 100%;
+
+    /* Estrutura */
+    --border: 164 14% 85%;            /* #D3DEDB */
+    --input: 164 14% 85%;
+    --ring: 173 80% 36%;
+    --radius: 0.5rem;
+
+    /* Sidebar */
+    --sidebar-background: 175 59% 12%;
+    --sidebar-foreground: 165 25% 82%;
+    --sidebar-primary: 173 80% 36%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 175 45% 17%;    /* #153F3B — item ativo */
+    --sidebar-accent-foreground: 0 0% 100%;
+    --sidebar-border: 175 40% 20%;
+    --sidebar-ring: 173 80% 36%;
+  }
+
+  .dark {
+    --background: 175 40% 8%;
+    --foreground: 165 25% 92%;
+    --card: 175 45% 11%;
+    --card-foreground: 165 25% 92%;
+    --popover: 175 45% 11%;
+    --popover-foreground: 165 25% 92%;
+    --primary: 173 62% 47%;           /* #2BC4B0 */
+    --primary-foreground: 175 59% 8%;
+    --brand-deep: 175 45% 11%;
+    --brand-deep-foreground: 165 25% 92%;
+    --secondary: 175 30% 16%;
+    --secondary-foreground: 165 25% 92%;
+    --muted: 175 30% 16%;
+    --muted-foreground: 168 12% 62%;
+    --accent: 175 30% 16%;
+    --accent-foreground: 165 25% 92%;
+    --destructive: 4 58% 56%;
+    --destructive-foreground: 0 0% 100%;
+    --warning: 37 68% 52%;
+    --warning-foreground: 175 59% 8%;
+    --success: 173 62% 47%;
+    --success-foreground: 175 59% 8%;
+    --border: 175 25% 20%;
+    --input: 175 25% 20%;
+    --ring: 173 62% 47%;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-family: 'IBM Plex Sans', system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  /* Newsreader só na marca e nos títulos de página e seção.
+     Não use serifada em rótulo, botão ou célula de tabela. */
+  h1, h2, .brand-type {
+    font-family: 'Newsreader', Georgia, serif;
+    font-weight: 600;
+    letter-spacing: -0.005em;
+  }
+
+  /* Toda coluna de dinheiro, quantidade e código usa isto. */
+  .num {
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Foco visível e consistente em toda a aplicação. */
+  :focus-visible {
+    @apply outline-none ring-2 ring-ring ring-offset-2 ring-offset-background;
+  }
+
+  ::selection {
+    background-color: hsl(var(--primary) / 0.22);
+  }
+}
+
+@layer components {
+  /* A borda destacada que define a identidade das superfícies do Emptra:
+     contorno firme + realce sutil no topo. */
+  .surface {
+    @apply rounded-lg border border-border bg-card shadow-card;
+  }
+
+  .surface-raised {
+    @apply rounded-lg border border-border bg-card shadow-raised;
+  }
+
+  /* Faixa da marca no topo de um card — usada nos KPIs principais. */
+  .surface-accent {
+    @apply surface relative overflow-hidden;
+  }
+  .surface-accent::before {
+    content: '';
+    @apply absolute inset-x-0 top-0 h-1 bg-primary;
+  }
+
+  .section-title {
+    @apply text-lg font-semibold text-foreground;
+    font-family: 'Newsreader', Georgia, serif;
+  }
+
+  /* Rolagem horizontal contida — tabelas largas nunca empurram a página. */
+  .scroll-x {
+    @apply overflow-x-auto;
+    scrollbar-width: thin;
+  }
+  .scroll-x::-webkit-scrollbar {
+    height: 8px;
+  }
+  .scroll-x::-webkit-scrollbar-thumb {
+    @apply rounded-full bg-border;
+  }
+
+  .skeleton {
+    @apply relative overflow-hidden rounded-md bg-muted;
+  }
+  .skeleton::after {
+    content: '';
+    @apply absolute inset-0 animate-shimmer;
+    background-image: linear-gradient(90deg, transparent, hsl(0 0% 100% / 0.45), transparent);
+  }
+}

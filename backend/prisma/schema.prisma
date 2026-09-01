@@ -1,0 +1,464 @@
+// ──────────────────────────────────────────────────────────────
+// Emptra — modelo de dados
+// Cotação de materiais para arquitetos e engenheiros
+// ──────────────────────────────────────────────────────────────
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ── Enums ─────────────────────────────────────────────────────
+
+enum Role {
+  ADMIN
+  BUYER
+  SUPPLIER
+}
+
+enum UserStatus {
+  PENDING // solicitou acesso, aguardando liberação do admin
+  ACTIVE
+  SUSPENDED
+}
+
+enum CompanyType {
+  BUYER
+  SUPPLIER
+}
+
+enum QuotationStatus {
+  DRAFT      // rascunho, ainda não enviada
+  SENT       // disparada aos fornecedores
+  RECEIVING  // já há propostas chegando
+  CLOSED     // prazo encerrado, em análise
+  AWARDED    // aprovada / adjudicada
+  CANCELLED
+}
+
+enum InviteStatus {
+  PENDING
+  SENT
+  VIEWED
+  RESPONDED
+  DECLINED
+  EXPIRED
+}
+
+enum BidStatus {
+  DRAFT      // fornecedor começou a responder (via WhatsApp ou web)
+  SUBMITTED  // proposta enviada
+  APPROVED   // venceu (total ou parcialmente)
+  REJECTED
+  WITHDRAWN
+}
+
+enum BidSource {
+  WEB
+  WHATSAPP
+  IMPORT
+}
+
+enum MessageDirection {
+  INBOUND
+  OUTBOUND
+}
+
+enum MessageStatus {
+  QUEUED
+  SENT
+  DELIVERED
+  READ
+  FAILED
+  RECEIVED
+}
+
+enum NotificationType {
+  QUOTATION_SENT
+  BID_RECEIVED
+  BID_APPROVED
+  BID_REJECTED
+  DEADLINE_NEAR
+  ACCESS_GRANTED
+  SYSTEM
+}
+
+// ── Empresas e usuários ───────────────────────────────────────
+
+model Company {
+  id        String      @id @default(uuid())
+  type      CompanyType
+  name      String
+  tradeName String?
+  cnpj      String?     @unique
+  email     String?
+  phone     String?
+  whatsapp  String?
+  city      String?
+  state     String?
+  address   String?
+  logoUrl   String?
+  active    Boolean     @default(true)
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+
+  users           User[]
+  supplierProfile SupplierProfile?
+  projects        Project[]
+
+  quotationsAsBuyer  Quotation[]       @relation("BuyerQuotations")
+  invitesAsSupplier  QuotationInvite[] @relation("SupplierInvites")
+  bidsAsSupplier     Bid[]             @relation("SupplierBids")
+  awardsAsSupplier   Award[]           @relation("SupplierAwards")
+
+  @@index([type, active])
+  @@map("companies")
+}
+
+model SupplierProfile {
+  id           String   @id @default(uuid())
+  companyId    String   @unique
+  categories   String[] @default([])
+  description  String?
+  deliveryDays Int      @default(7)
+  minOrder     Decimal? @db.Decimal(14, 2)
+  paymentTerms String?
+  rating       Decimal  @default(0) @db.Decimal(3, 2)
+  autoReply    Boolean  @default(true) // participa do fluxo automático de WhatsApp
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@map("supplier_profiles")
+}
+
+model User {
+  id           String     @id @default(uuid())
+  name         String
+  email        String     @unique
+  passwordHash String
+  role         Role
+  status       UserStatus @default(PENDING)
+  phone        String?
+  jobTitle     String?
+  avatarUrl    String?
+  companyId    String?
+  lastLoginAt  DateTime?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  company           Company?         @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  quotationsCreated Quotation[]      @relation("QuotationAuthor")
+  awardsGranted     Award[]          @relation("AwardedBy")
+  refreshTokens     RefreshToken[]
+  notifications     Notification[]
+  auditLogs         AuditLog[]
+
+  @@index([role, status])
+  @@map("users")
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid())
+  token     String   @unique
+  userId    String
+  expiresAt DateTime
+  revokedAt DateTime?
+  userAgent String?
+  ip        String?
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("refresh_tokens")
+}
+
+// ── Obras / centros de custo do comprador ─────────────────────
+
+model Project {
+  id        String   @id @default(uuid())
+  companyId String
+  name      String
+  code      String?
+  address   String?
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  company    Company     @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  quotations Quotation[]
+
+  @@index([companyId, active])
+  @@map("projects")
+}
+
+// ── Cotação ───────────────────────────────────────────────────
+
+model Quotation {
+  id              String          @id @default(uuid())
+  code            String          @unique // COT-2025-0001
+  title           String
+  description     String?
+  status          QuotationStatus @default(DRAFT)
+  buyerCompanyId  String
+  createdById     String
+  projectId       String?
+  deadline        DateTime
+  deliveryAddress String?
+  deliveryDate    DateTime?
+  paymentTerms    String?
+  notes           String?
+  sentAt          DateTime?
+  closedAt        DateTime?
+  awardedAt       DateTime?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  buyerCompany Company         @relation("BuyerQuotations", fields: [buyerCompanyId], references: [id], onDelete: Cascade)
+  createdBy    User            @relation("QuotationAuthor", fields: [createdById], references: [id])
+  project      Project?        @relation(fields: [projectId], references: [id], onDelete: SetNull)
+
+  items    QuotationItem[]
+  invites  QuotationInvite[]
+  bids     Bid[]
+  awards   Award[]
+  messages WhatsAppMessage[]
+
+  @@index([buyerCompanyId, status])
+  @@index([status, deadline])
+  @@map("quotations")
+}
+
+model QuotationItem {
+  id          String   @id @default(uuid())
+  quotationId String
+  position    Int
+  description String
+  sku         String?
+  unit        String   @default("un")
+  quantity    Decimal  @db.Decimal(14, 3)
+  brandRef    String?
+  targetPrice Decimal? @db.Decimal(14, 2)
+  notes       String?
+  createdAt   DateTime @default(now())
+
+  quotation  Quotation   @relation(fields: [quotationId], references: [id], onDelete: Cascade)
+  bidItems   BidItem[]
+  awardItems AwardItem[]
+
+  @@unique([quotationId, position])
+  @@index([quotationId])
+  @@map("quotation_items")
+}
+
+model QuotationInvite {
+  id                String       @id @default(uuid())
+  quotationId       String
+  supplierCompanyId String
+  status            InviteStatus @default(PENDING)
+  token             String       @unique // link público de resposta
+  channel           String       @default("whatsapp")
+  phone             String?
+  sentAt            DateTime?
+  viewedAt          DateTime?
+  respondedAt       DateTime?
+  declineReason     String?
+  remindersSent     Int          @default(0)
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+
+  quotation       Quotation @relation(fields: [quotationId], references: [id], onDelete: Cascade)
+  supplierCompany Company   @relation("SupplierInvites", fields: [supplierCompanyId], references: [id], onDelete: Cascade)
+  bid             Bid?
+
+  @@unique([quotationId, supplierCompanyId])
+  @@index([status])
+  @@map("quotation_invites")
+}
+
+// ── Proposta do fornecedor ────────────────────────────────────
+
+model Bid {
+  id                String    @id @default(uuid())
+  quotationId       String
+  supplierCompanyId String
+  inviteId          String?   @unique
+  status            BidStatus @default(DRAFT)
+  source            BidSource @default(WEB)
+  totalAmount       Decimal   @default(0) @db.Decimal(14, 2)
+  deliveryDays      Int?
+  paymentTerms      String?
+  freight           Decimal   @default(0) @db.Decimal(14, 2)
+  discount          Decimal   @default(0) @db.Decimal(14, 2)
+  validUntil        DateTime?
+  notes             String?
+  submittedAt       DateTime?
+  reviewedAt        DateTime?
+  rejectionReason   String?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  quotation       Quotation        @relation(fields: [quotationId], references: [id], onDelete: Cascade)
+  supplierCompany Company          @relation("SupplierBids", fields: [supplierCompanyId], references: [id], onDelete: Cascade)
+  invite          QuotationInvite? @relation(fields: [inviteId], references: [id], onDelete: SetNull)
+
+  items  BidItem[]
+  awards Award[]
+
+  @@unique([quotationId, supplierCompanyId])
+  @@index([supplierCompanyId, status])
+  @@map("bids")
+}
+
+model BidItem {
+  id              String   @id @default(uuid())
+  bidId           String
+  quotationItemId String
+  unitPrice       Decimal  @default(0) @db.Decimal(14, 4)
+  quantity        Decimal  @db.Decimal(14, 3)
+  total           Decimal  @default(0) @db.Decimal(14, 2)
+  brand           String?
+  available       Boolean  @default(true)
+  leadTimeDays    Int?
+  notes           String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  bid           Bid           @relation(fields: [bidId], references: [id], onDelete: Cascade)
+  quotationItem QuotationItem @relation(fields: [quotationItemId], references: [id], onDelete: Cascade)
+  awardItems    AwardItem[]
+
+  @@unique([bidId, quotationItemId])
+  @@index([quotationItemId])
+  @@map("bid_items")
+}
+
+// ── Adjudicação (aprovação da cotação) ────────────────────────
+
+model Award {
+  id                String   @id @default(uuid())
+  quotationId       String
+  bidId             String
+  supplierCompanyId String
+  awardedById       String
+  totalAmount       Decimal  @db.Decimal(14, 2) // valor efetivamente aprovado
+  baselineAmount    Decimal  @db.Decimal(14, 2) // média das propostas para os mesmos itens
+  savings           Decimal  @db.Decimal(14, 2) // baseline - total
+  notes             String?
+  createdAt         DateTime @default(now())
+
+  quotation       Quotation @relation(fields: [quotationId], references: [id], onDelete: Cascade)
+  bid             Bid       @relation(fields: [bidId], references: [id], onDelete: Cascade)
+  supplierCompany Company   @relation("SupplierAwards", fields: [supplierCompanyId], references: [id], onDelete: Cascade)
+  awardedBy       User      @relation("AwardedBy", fields: [awardedById], references: [id])
+
+  items AwardItem[]
+
+  @@unique([quotationId, bidId])
+  @@index([supplierCompanyId])
+  @@map("awards")
+}
+
+model AwardItem {
+  id              String  @id @default(uuid())
+  awardId         String
+  quotationItemId String
+  bidItemId       String
+  quantity        Decimal @db.Decimal(14, 3)
+  unitPrice       Decimal @db.Decimal(14, 4)
+  total           Decimal @db.Decimal(14, 2)
+
+  award         Award         @relation(fields: [awardId], references: [id], onDelete: Cascade)
+  quotationItem QuotationItem @relation(fields: [quotationItemId], references: [id], onDelete: Cascade)
+  bidItem       BidItem       @relation(fields: [bidItemId], references: [id], onDelete: Cascade)
+
+  @@unique([awardId, quotationItemId])
+  @@map("award_items")
+}
+
+// ── WhatsApp ──────────────────────────────────────────────────
+
+model WhatsAppMessage {
+  id          String           @id @default(uuid())
+  direction   MessageDirection
+  status      MessageStatus    @default(QUEUED)
+  waId        String? // id da mensagem no provedor
+  phone       String
+  body        String?
+  template    String?
+  payload     Json?
+  error       String?
+  quotationId String?
+  inviteId    String?
+  createdAt   DateTime         @default(now())
+
+  quotation Quotation? @relation(fields: [quotationId], references: [id], onDelete: SetNull)
+
+  @@index([phone, createdAt])
+  @@index([quotationId])
+  @@map("whatsapp_messages")
+}
+
+/// Estado da conversa automatizada com o fornecedor no WhatsApp.
+model WhatsAppSession {
+  id        String   @id @default(uuid())
+  phone     String   @unique
+  inviteId  String?
+  bidId     String?
+  step      String   @default("IDLE") // IDLE | COLLECTING | REVIEW | DONE
+  context   Json?
+  expiresAt DateTime
+  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
+
+  @@map("whatsapp_sessions")
+}
+
+// ── Suporte ───────────────────────────────────────────────────
+
+model Notification {
+  id        String           @id @default(uuid())
+  userId    String
+  type      NotificationType @default(SYSTEM)
+  title     String
+  body      String?
+  link      String?
+  read      Boolean          @default(false)
+  createdAt DateTime         @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, read])
+  @@map("notifications")
+}
+
+model AuditLog {
+  id       String   @id @default(uuid())
+  userId   String?
+  action   String
+  entity   String
+  entityId String?
+  meta     Json?
+  ip       String?
+  createdAt DateTime @default(now())
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([entity, entityId])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
+
+model Setting {
+  key       String   @id
+  value     Json
+  updatedAt DateTime @updatedAt
+
+  @@map("settings")
+}

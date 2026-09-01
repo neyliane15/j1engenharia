@@ -1,0 +1,263 @@
+{
+  "name": "Emptra · 1 · WhatsApp entrada (fornecedor responde)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "emptra-whatsapp-entrada",
+        "responseMode": "responseNode",
+        "options": {
+          "rawBody": false
+        }
+      },
+      "id": "webhook-whatsapp",
+      "name": "Webhook WhatsApp",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -620,
+        300
+      ],
+      "webhookId": "emptra-whatsapp-entrada"
+    },
+    {
+      "parameters": {
+        "jsCode": "/**\n * Normaliza o evento do provedor de WhatsApp num formato único:\n *   { phone, body, waId, name }\n *\n * Suporta a Cloud API (Meta) e a Evolution API. Se o formato mudar,\n * é o único ponto que precisa ser ajustado.\n */\nconst out = [];\n\nfor (const item of $input.all()) {\n  const b = item.json ?? {};\n\n  // ── WhatsApp Cloud API (Meta) ────────────────────────────\n  const change = b?.entry?.[0]?.changes?.[0]?.value;\n  if (change?.messages?.length) {\n    const msg = change.messages[0];\n    const contact = change.contacts?.[0];\n    const text =\n      msg.text?.body ??\n      msg.button?.text ??\n      msg.interactive?.list_reply?.title ??\n      msg.interactive?.button_reply?.title ??\n      '';\n    out.push({\n      json: {\n        phone: msg.from,\n        body: String(text).trim(),\n        waId: msg.id ?? null,\n        name: contact?.profile?.name ?? null,\n        provider: 'cloud-api',\n      },\n    });\n    continue;\n  }\n\n  // Status de entrega da Cloud API — vai para outro caminho.\n  if (change?.statuses?.length) {\n    const st = change.statuses[0];\n    out.push({\n      json: {\n        isStatus: true,\n        waId: st.id,\n        status: String(st.status ?? '').toUpperCase(),\n        error: st.errors?.[0]?.title ?? null,\n        provider: 'cloud-api',\n      },\n    });\n    continue;\n  }\n\n  // ── Evolution API ────────────────────────────────────────\n  const data = b?.data ?? b;\n  if (data?.key?.remoteJid) {\n    // Ignora o que a própria instância enviou e mensagens de grupo.\n    if (data.key.fromMe) continue;\n    if (String(data.key.remoteJid).includes('@g.us')) continue;\n\n    const text =\n      data.message?.conversation ??\n      data.message?.extendedTextMessage?.text ??\n      data.message?.buttonsResponseMessage?.selectedDisplayText ??\n      data.message?.listResponseMessage?.title ??\n      '';\n    out.push({\n      json: {\n        phone: String(data.key.remoteJid).split('@')[0],\n        body: String(text).trim(),\n        waId: data.key.id ?? null,\n        name: data.pushName ?? null,\n        provider: 'evolution',\n      },\n    });\n    continue;\n  }\n\n  // ── Já normalizado (testes manuais) ──────────────────────\n  if (b.phone && typeof b.body === 'string') {\n    out.push({ json: { phone: String(b.phone), body: b.body.trim(), waId: b.waId ?? null, name: b.name ?? null } });\n  }\n}\n\nreturn out;"
+      },
+      "id": "normalizar-evento",
+      "name": "Normalizar evento",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -400,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "version": 2
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.isStatus }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "é-status-de-entrega?",
+      "name": "É status de entrega?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        -180,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "/**\n * Assina o corpo com HMAC-SHA256 usando EMPTRA_WEBHOOK_SECRET.\n * A API do Emptra aceita a assinatura OU a chave simples; a assinatura\n * é o caminho recomendado em produção.\n */\nconst crypto = require('crypto');\nconst secret = $env.EMPTRA_WEBHOOK_SECRET || '';\n\nreturn $input.all().map((item) => {\n  const body = JSON.stringify(item.json);\n  const signature = 'sha256=' + crypto.createHmac('sha256', secret).update(body).digest('hex');\n  return { json: { ...item.json, __body: body, __signature: signature } };\n});"
+      },
+      "id": "assinar-(status)",
+      "name": "Assinar (status)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        60,
+        180
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "/**\n * Assina o corpo com HMAC-SHA256 usando EMPTRA_WEBHOOK_SECRET.\n * A API do Emptra aceita a assinatura OU a chave simples; a assinatura\n * é o caminho recomendado em produção.\n */\nconst crypto = require('crypto');\nconst secret = $env.EMPTRA_WEBHOOK_SECRET || '';\n\nreturn $input.all().map((item) => {\n  const body = JSON.stringify(item.json);\n  const signature = 'sha256=' + crypto.createHmac('sha256', secret).update(body).digest('hex');\n  return { json: { ...item.json, __body: body, __signature: signature } };\n});"
+      },
+      "id": "assinar-(mensagem)",
+      "name": "Assinar (mensagem)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        60,
+        420
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.EMPTRA_API_URL }}/webhooks/n8n/whatsapp/status",
+        "sendHeaders": true,
+        "specifyHeaders": "json",
+        "jsonHeaders": "={{ { 'content-type': 'application/json', 'x-emptra-signature': $json.__signature } }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json.__body }}",
+        "options": {
+          "timeout": 20000,
+          "response": {
+            "response": {
+              "neverError": true,
+              "fullResponse": false
+            }
+          }
+        }
+      },
+      "id": "api-·-atualizar-status",
+      "name": "API · atualizar status",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        300,
+        180
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.EMPTRA_API_URL }}/webhooks/n8n/whatsapp/inbound",
+        "sendHeaders": true,
+        "specifyHeaders": "json",
+        "jsonHeaders": "={{ { 'content-type': 'application/json', 'x-emptra-signature': $json.__signature } }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json.__body }}",
+        "options": {
+          "timeout": 20000,
+          "response": {
+            "response": {
+              "neverError": true,
+              "fullResponse": false
+            }
+          }
+        }
+      },
+      "id": "api-·-processar-mensagem",
+      "name": "API · processar mensagem",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        300,
+        420
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ ok: true }) }}",
+        "options": {}
+      },
+      "id": "responder-200",
+      "name": "Responder 200",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        560,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook WhatsApp": {
+      "main": [
+        [
+          {
+            "node": "Normalizar evento",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalizar evento": {
+      "main": [
+        [
+          {
+            "node": "É status de entrega?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "É status de entrega?": {
+      "main": [
+        [
+          {
+            "node": "Assinar (status)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Assinar (mensagem)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Assinar (status)": {
+      "main": [
+        [
+          {
+            "node": "API · atualizar status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Assinar (mensagem)": {
+      "main": [
+        [
+          {
+            "node": "API · processar mensagem",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "API · atualizar status": {
+      "main": [
+        [
+          {
+            "node": "Responder 200",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "API · processar mensagem": {
+      "main": [
+        [
+          {
+            "node": "Responder 200",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "America/Sao_Paulo"
+  },
+  "active": false,
+  "tags": [
+    {
+      "name": "emptra"
+    }
+  ]
+}

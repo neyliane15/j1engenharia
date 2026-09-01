@@ -1,0 +1,238 @@
+{
+  "name": "Emptra · 2 · WhatsApp saída (enviar mensagem)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "emptra-whatsapp-envio",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-envio",
+      "name": "Webhook envio",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -620,
+        300
+      ],
+      "webhookId": "emptra-whatsapp-envio"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "version": 2
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.headers['x-emptra-key'] }}",
+              "rightValue": "={{ $env.EMPTRA_N8N_API_KEY }}",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "validar-chave",
+      "name": "Validar chave",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        -400,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// O corpo do webhook vem em $json.body\nreturn $input.all().map((i) => ({ json: i.json.body ?? i.json }));"
+      },
+      "id": "montar-envio",
+      "name": "Montar envio",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -160,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "/**\n * Monta a chamada de envio conforme o provedor configurado em\n * WHATSAPP_PROVIDER (cloud-api | evolution).\n */\nconst provider = ($env.WHATSAPP_PROVIDER || 'cloud-api').toLowerCase();\n\nreturn $input.all().map((item) => {\n  const { phone, body, messageId } = item.json;\n  const digits = String(phone).replace(/\\D/g, '');\n\n  if (provider === 'evolution') {\n    return {\n      json: {\n        messageId,\n        url: `${$env.EVOLUTION_API_URL}/message/sendText/${$env.EVOLUTION_INSTANCE}`,\n        headers: { apikey: $env.EVOLUTION_API_KEY, 'content-type': 'application/json' },\n        payload: { number: digits, text: body },\n      },\n    };\n  }\n\n  return {\n    json: {\n      messageId,\n      url: `https://graph.facebook.com/v21.0/${$env.WHATSAPP_PHONE_NUMBER_ID}/messages`,\n      headers: {\n        authorization: `Bearer ${$env.WHATSAPP_TOKEN}`,\n        'content-type': 'application/json',\n      },\n      payload: {\n        messaging_product: 'whatsapp',\n        recipient_type: 'individual',\n        to: digits,\n        type: 'text',\n        text: { preview_url: true, body },\n      },\n    },\n  };\n});"
+      },
+      "id": "preparar-provedor",
+      "name": "Preparar provedor",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        60,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "amount": 1,
+        "unit": "seconds"
+      },
+      "id": "aguardar-1s",
+      "name": "Aguardar 1s",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        280,
+        200
+      ],
+      "webhookId": "emptra-throttle"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.url }}",
+        "sendHeaders": true,
+        "specifyHeaders": "json",
+        "jsonHeaders": "={{ $json.headers }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.payload) }}",
+        "options": {
+          "timeout": 20000,
+          "response": {
+            "response": {
+              "neverError": true,
+              "fullResponse": false
+            }
+          }
+        }
+      },
+      "id": "enviar-whatsapp",
+      "name": "Enviar WhatsApp",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        500,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ ok: true }) }}",
+        "options": {}
+      },
+      "id": "responder-envio",
+      "name": "Responder envio",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        740,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseCode": 401,
+        "responseBody": "={{ JSON.stringify({ error: \"chave invalida\" }) }}",
+        "options": {}
+      },
+      "id": "responder-401",
+      "name": "Responder 401",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        -160,
+        420
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook envio": {
+      "main": [
+        [
+          {
+            "node": "Validar chave",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validar chave": {
+      "main": [
+        [
+          {
+            "node": "Montar envio",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Responder 401",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Montar envio": {
+      "main": [
+        [
+          {
+            "node": "Preparar provedor",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preparar provedor": {
+      "main": [
+        [
+          {
+            "node": "Aguardar 1s",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aguardar 1s": {
+      "main": [
+        [
+          {
+            "node": "Enviar WhatsApp",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enviar WhatsApp": {
+      "main": [
+        [
+          {
+            "node": "Responder envio",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "America/Sao_Paulo"
+  },
+  "active": false,
+  "tags": [
+    {
+      "name": "emptra"
+    }
+  ]
+}

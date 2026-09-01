@@ -1,0 +1,207 @@
+{
+  "name": "Emptra · 4 · Rotinas (lembretes e fechamento)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 1
+            }
+          ]
+        }
+      },
+      "id": "a-cada-hora",
+      "name": "A cada hora",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -640,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{ json: { hoursBefore: 24 } }];"
+      },
+      "id": "corpo-lembretes",
+      "name": "Corpo lembretes",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -420,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{ json: {} }];"
+      },
+      "id": "corpo-fechamento",
+      "name": "Corpo fechamento",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -420,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "/**\n * Assina o corpo com HMAC-SHA256 usando EMPTRA_WEBHOOK_SECRET.\n * A API do Emptra aceita a assinatura OU a chave simples; a assinatura\n * é o caminho recomendado em produção.\n */\nconst crypto = require('crypto');\nconst secret = $env.EMPTRA_WEBHOOK_SECRET || '';\n\nreturn $input.all().map((item) => {\n  const body = JSON.stringify(item.json);\n  const signature = 'sha256=' + crypto.createHmac('sha256', secret).update(body).digest('hex');\n  return { json: { ...item.json, __body: body, __signature: signature } };\n});"
+      },
+      "id": "assinar-lembretes",
+      "name": "Assinar lembretes",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -200,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "/**\n * Assina o corpo com HMAC-SHA256 usando EMPTRA_WEBHOOK_SECRET.\n * A API do Emptra aceita a assinatura OU a chave simples; a assinatura\n * é o caminho recomendado em produção.\n */\nconst crypto = require('crypto');\nconst secret = $env.EMPTRA_WEBHOOK_SECRET || '';\n\nreturn $input.all().map((item) => {\n  const body = JSON.stringify(item.json);\n  const signature = 'sha256=' + crypto.createHmac('sha256', secret).update(body).digest('hex');\n  return { json: { ...item.json, __body: body, __signature: signature } };\n});"
+      },
+      "id": "assinar-fechamento",
+      "name": "Assinar fechamento",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -200,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.EMPTRA_API_URL }}/webhooks/n8n/cron/reminders",
+        "sendHeaders": true,
+        "specifyHeaders": "json",
+        "jsonHeaders": "={{ { 'content-type': 'application/json', 'x-emptra-signature': $json.__signature } }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json.__body }}",
+        "options": {
+          "timeout": 20000,
+          "response": {
+            "response": {
+              "neverError": true,
+              "fullResponse": false
+            }
+          }
+        }
+      },
+      "id": "api-·-lembretes",
+      "name": "API · lembretes",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        40,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.EMPTRA_API_URL }}/webhooks/n8n/cron/close-expired",
+        "sendHeaders": true,
+        "specifyHeaders": "json",
+        "jsonHeaders": "={{ { 'content-type': 'application/json', 'x-emptra-signature': $json.__signature } }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json.__body }}",
+        "options": {
+          "timeout": 20000,
+          "response": {
+            "response": {
+              "neverError": true,
+              "fullResponse": false
+            }
+          }
+        }
+      },
+      "id": "api-·-fechar-vencidas",
+      "name": "API · fechar vencidas",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        40,
+        400
+      ]
+    }
+  ],
+  "connections": {
+    "A cada hora": {
+      "main": [
+        [
+          {
+            "node": "Corpo lembretes",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Corpo fechamento",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Corpo lembretes": {
+      "main": [
+        [
+          {
+            "node": "Assinar lembretes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Corpo fechamento": {
+      "main": [
+        [
+          {
+            "node": "Assinar fechamento",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Assinar lembretes": {
+      "main": [
+        [
+          {
+            "node": "API · lembretes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Assinar fechamento": {
+      "main": [
+        [
+          {
+            "node": "API · fechar vencidas",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "America/Sao_Paulo"
+  },
+  "active": false,
+  "tags": [
+    {
+      "name": "emptra"
+    }
+  ]
+}
