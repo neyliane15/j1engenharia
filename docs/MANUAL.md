@@ -469,17 +469,27 @@ DELETE FROM companies WHERE cnpj IN ('12345678000190','11222333000144')
 
 ### Logomarca
 
-O monograma vive em dois arquivos, com o mesmo desenho:
+Os arquivos oficiais estão em `frontend/public/brand/`:
 
-- `frontend/src/components/Logo.tsx` — o `<svg>` usado na aplicação
-- `frontend/public/favicon.svg` — o ícone da aba
+| Arquivo | Uso |
+| --- | --- |
+| `emptra-simbolo.svg` | duas cores, sobre fundo claro |
+| `emptra-simbolo-mono.svg` | cor única, para fundo escuro e impressão |
+| `emptra-assinatura-horizontal.svg` | site, documento, apresentação |
+| `emptra-icone.svg` | favicon, PWA, ícone de aplicativo |
 
-Substitua o conteúdo do `<svg>` mantendo o `viewBox="0 0 64 64"`. Se usar um
-arquivo de imagem, coloque em `frontend/public/logo.svg` e troque o `<svg>`
-por `<img src="/logo.svg" className="h-9 w-9" alt="Emptra" />`.
+Na aplicação o símbolo é desenhado inline em
+`frontend/src/components/Logo.tsx` para herdar os tokens de cor. Se receber
+uma versão nova dos arquivos, substitua os SVGs em `public/brand/` e o path
+dentro do `Logo.tsx` — são o mesmo desenho.
 
-O logotipo aparece com fundo escuro na sidebar e com fundo claro no login —
-por isso as cores usam as variáveis (`hsl(var(--primary))`), que se adaptam.
+Reduções mínimas: símbolo 16px em tela, assinatura 90px. Abaixo disso, use só
+o símbolo. Nunca altere a espessura do traço, incline, aplique sombra ou troque
+a cor do braço médio.
+
+> O logotipo da assinatura usa `<text>` com Newsreader. Antes de usar em
+> material impresso ou enviar a terceiros, converta o texto em curvas num
+> editor vetorial. O símbolo já é path puro.
 
 ### Cores e tipografia
 
@@ -495,10 +505,13 @@ aplicação inteira acompanha — nenhum componente usa hex solto.
 | `--destructive` / `--warning` / `--success` | estados |
 | `--radius` | arredondamento |
 
-As fontes são **IBM Plex Sans** (texto) e **Newsreader** (marca e títulos),
-carregadas do Google Fonts na primeira linha do arquivo. A serifada é usada
-**só** em `h1`, `h2` e `.brand-type` — nunca em rótulo, botão ou célula de
-tabela.
+As fontes são **IBM Plex Sans** (texto, pesos 400 e 500) e **Newsreader**
+(marca e títulos, peso 600), carregadas do Google Fonts na primeira linha do
+arquivo. A serifada é usada **só** no logotipo, no título de página e no de
+seção — nunca em rótulo, botão, título de card ou célula de tabela.
+
+As regras completas estão em [manual-marca.md](manual-marca.md) e a
+implementação em [DESIGN.md](DESIGN.md).
 
 Números de dinheiro, quantidade e código usam a classe `.num`
 (`font-variant-numeric: tabular-nums`), que alinha as colunas.

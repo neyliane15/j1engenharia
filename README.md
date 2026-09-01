@@ -63,4 +63,5 @@ emptra/
 - [Protocolo de conversa no WhatsApp](docs/WHATSAPP.md)
 - [Referência da API](docs/API.md)
 - [Arquitetura](docs/ARQUITETURA.md)
-- [Design system](docs/DESIGN.md)
+- [Manual da marca](docs/manual-marca.md)
+- [Design system — o manual da marca no código](docs/DESIGN.md)

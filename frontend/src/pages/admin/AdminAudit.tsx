@@ -66,7 +66,7 @@ export default function AdminAudit() {
                     <Td><Badge tone="outline" className="num">{a.action}</Badge></Td>
                     <Td className="text-muted-foreground">
                       {a.entity}
-                      {a.entityId && <span className="num mt-0.5 block text-[11px]">{a.entityId.slice(0, 8)}</span>}
+                      {a.entityId && <span className="num mt-1 block text-[11px]">{a.entityId.slice(0, 8)}</span>}
                     </Td>
                     <Td className="max-w-xs">
                       {a.meta && Object.keys(a.meta).length ? (

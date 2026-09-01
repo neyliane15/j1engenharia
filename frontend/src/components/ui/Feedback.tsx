@@ -18,7 +18,7 @@ export function LoadingBlock({ label = 'Carregando...', className }: { label?: s
 
 export function SkeletonRows({ rows = 4, className }: { rows?: number; className?: string }) {
   return (
-    <div className={cn('space-y-2 p-5', className)}>
+    <div className={cn('space-y-2 p-6', className)}>
       {Array.from({ length: rows }).map((_, i) => (
         <div key={i} className="skeleton h-11" />
       ))}

@@ -73,8 +73,8 @@ export default function SupplierAwards() {
                 }
               />
 
-              <div className="flex flex-wrap gap-2 border-b border-border px-5 py-3">
-                <Badge tone="success">Total {formatMoney(a.total)}</Badge>
+              <div className="flex flex-wrap gap-2 border-b border-border px-6 py-3">
+                <Badge tone="approved">Total {formatMoney(a.total)}</Badge>
                 <Badge tone="outline">{a.items.length} {a.items.length === 1 ? 'item' : 'itens'}</Badge>
                 {a.deliveryDays !== null && <Badge tone="outline">Entrega em {a.deliveryDays} dias</Badge>}
                 {a.paymentTerms && <Badge tone="outline">{a.paymentTerms}</Badge>}
@@ -94,7 +94,7 @@ export default function SupplierAwards() {
                     {a.items.map((i) => (
                       <Tr key={i.position}>
                         <Td>
-                          <span className="num mr-1.5 text-muted-foreground">{i.position}.</span>
+                          <span className="num mr-2 text-muted-foreground">{i.position}.</span>
                           {i.description}
                         </Td>
                         <Td numeric className="text-muted-foreground">{formatNumber(i.quantity)} {i.unit}</Td>
@@ -106,7 +106,7 @@ export default function SupplierAwards() {
                   <tfoot>
                     <tr className="bg-secondary/60">
                       <td colSpan={3} className="px-4 py-3 text-right text-sm font-medium">Total aprovado</td>
-                      <td className="num px-4 py-3 text-right text-sm font-semibold">{formatMoney(a.total)}</td>
+                      <td className="num px-4 py-3 text-right text-sm font-medium">{formatMoney(a.total)}</td>
                     </tr>
                   </tfoot>
                 </Table>
@@ -176,7 +176,7 @@ export function SupplierRevenue() {
                   <Tr key={c.name}>
                     <Td className="font-medium">{c.name}</Td>
                     <Td numeric>{c.orders}</Td>
-                    <Td numeric className="font-semibold">{formatMoney(c.total)}</Td>
+                    <Td numeric className="font-medium">{formatMoney(c.total)}</Td>
                     <Td numeric className="text-muted-foreground">
                       {total ? `${Math.round((c.total / total) * 100)}%` : '—'}
                     </Td>

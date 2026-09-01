@@ -179,7 +179,7 @@ model RefreshToken {
   @@map("refresh_tokens")
 }
 
-// ── Obras / centros de custo do comprador ─────────────────────
+// ── Centros de custo do comprador ─────────────────────────────
 
 model Project {
   id        String   @id @default(uuid())

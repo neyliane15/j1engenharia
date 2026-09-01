@@ -161,11 +161,11 @@ export default function BidForm() {
       )}
 
       <div className="mb-6 rounded-md border border-primary/25 bg-primary/[0.05] px-4 py-3">
-        <p className="flex items-start gap-2.5 text-sm text-foreground">
-          <MessageSquareText className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+        <p className="flex items-start gap-2 text-sm text-foreground">
+          <MessageSquareText className="mt-1 h-4 w-4 shrink-0 text-primary" />
           <span>
-            Prefere responder pelo WhatsApp? Mande <code className="num rounded bg-card px-1 py-0.5 text-xs">1 45,90</code>{' '}
-            para cada item e <code className="num rounded bg-card px-1 py-0.5 text-xs">ENVIAR</code> no fim. O que chegar
+            Prefere responder pelo WhatsApp? Mande <code className="num rounded bg-card px-1 py-1 text-xs">1 45,90</code>{' '}
+            para cada item e <code className="num rounded bg-card px-1 py-1 text-xs">ENVIAR</code> no fim. O que chegar
             por lá aparece preenchido aqui.
           </span>
         </p>
@@ -193,10 +193,10 @@ export default function BidForm() {
                     <Tr key={l.quotationItemId} className={cn(!l.available && 'opacity-55')}>
                       <Td>
                         <span className="block text-sm font-medium text-foreground">
-                          <span className="num mr-1.5 text-muted-foreground">{l.position}.</span>
+                          <span className="num mr-2 text-muted-foreground">{l.position}.</span>
                           {l.description}
                         </span>
-                        {l.brandRef && <span className="mt-0.5 block text-xs text-muted-foreground">ref. {l.brandRef}</span>}
+                        {l.brandRef && <span className="mt-1 block text-xs text-muted-foreground">ref. {l.brandRef}</span>}
                       </Td>
                       <Td numeric className="whitespace-nowrap text-muted-foreground">
                         {formatNumber(l.quantity)} {l.unit}
@@ -295,7 +295,7 @@ export default function BidForm() {
                 placeholder="Condições especiais, prazo de validade da proposta..."
               />
 
-              <dl className="space-y-1.5 rounded-md border border-border bg-secondary/40 p-3.5 text-sm">
+              <dl className="space-y-2 rounded-md border border-border bg-secondary/40 p-3 text-sm">
                 <div className="flex justify-between">
                   <dt className="text-muted-foreground">Subtotal</dt>
                   <dd className="num">{formatMoney(totals.subtotal)}</dd>
@@ -312,7 +312,7 @@ export default function BidForm() {
                     <dd className="num text-success">−{formatMoney(totals.discount)}</dd>
                   </div>
                 )}
-                <div className="flex justify-between border-t border-border pt-1.5 text-base font-semibold">
+                <div className="flex justify-between border-t border-border pt-2 text-base font-medium">
                   <dt>Total</dt>
                   <dd className="num">{formatMoney(totals.total)}</dd>
                 </div>

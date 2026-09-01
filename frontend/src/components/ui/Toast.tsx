@@ -22,7 +22,7 @@ interface ToastContextValue {
 const ToastContext = createContext<ToastContextValue | null>(null);
 
 const styles: Record<ToastTone, { wrap: string; icon: ReactNode }> = {
-  success: { wrap: 'border-l-success', icon: <CheckCircle2 className="h-5 w-5 text-success" /> },
+  success: { wrap: 'border-l-[hsl(var(--state-approved-foreground))]', icon: <CheckCircle2 className="h-5 w-5 text-state-approved-foreground" /> },
   error: { wrap: 'border-l-destructive', icon: <XCircle className="h-5 w-5 text-destructive" /> },
   warning: { wrap: 'border-l-warning', icon: <TriangleAlert className="h-5 w-5 text-warning" /> },
   info: { wrap: 'border-l-primary', icon: <Info className="h-5 w-5 text-primary" /> },
@@ -74,19 +74,19 @@ function ToastCard({ toast, onDismiss }: { toast: Toast; onDismiss: () => void }
       role="status"
       className={cn(
         'pointer-events-auto flex w-full max-w-sm animate-slide-in-right items-start gap-3',
-        'rounded-md border border-l-4 border-border bg-card p-3.5 shadow-pop',
+        'rounded-lg border border-l-4 border-border bg-card p-4 shadow-pop',
         styles[toast.tone].wrap,
       )}
     >
-      <span className="mt-0.5 shrink-0">{styles[toast.tone].icon}</span>
+      <span className="mt-1 shrink-0">{styles[toast.tone].icon}</span>
       <div className="min-w-0 flex-1">
         <p className="text-sm font-medium text-foreground">{toast.title}</p>
-        {toast.description && <p className="mt-0.5 text-[13px] leading-snug text-muted-foreground">{toast.description}</p>}
+        {toast.description && <p className="mt-1 text-[13px] leading-snug text-muted-foreground">{toast.description}</p>}
       </div>
       <button
         onClick={onDismiss}
         aria-label="Fechar aviso"
-        className="rounded p-0.5 text-muted-foreground transition-colors hover:text-foreground"
+        className="rounded p-1 text-muted-foreground transition-colors hover:text-foreground"
       >
         <X className="h-4 w-4" />
       </button>

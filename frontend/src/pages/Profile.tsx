@@ -100,7 +100,7 @@ export default function Profile() {
             <Card>
               <CardHeader title="Minha empresa" />
               <CardBody>
-                <dl className="space-y-2.5 text-sm">
+                <dl className="space-y-2 text-sm">
                   <div className="flex justify-between gap-4">
                     <dt className="text-muted-foreground">Razão social</dt>
                     <dd className="text-right font-medium">{user.company.name}</dd>
@@ -122,7 +122,7 @@ export default function Profile() {
                   <div className="flex justify-between gap-4">
                     <dt className="text-muted-foreground">Tipo</dt>
                     <dd className="text-right">
-                      <Badge tone={user.company.type === 'BUYER' ? 'primary' : 'neutral'}>
+                      <Badge tone={user.company.type === 'BUYER' ? 'neutral' : 'neutral'}>
                         {user.company.type === 'BUYER' ? 'Comprador' : 'Fornecedor'}
                       </Badge>
                     </dd>
@@ -132,7 +132,7 @@ export default function Profile() {
                 {user.company.supplierProfile?.categories.length ? (
                   <div className="mt-4 border-t border-border pt-4">
                     <p className="mb-2 text-[13px] font-medium">Categorias fornecidas</p>
-                    <div className="flex flex-wrap gap-1.5">
+                    <div className="flex flex-wrap gap-2">
                       {user.company.supplierProfile.categories.map((c) => (
                         <Badge key={c} tone="outline">{c}</Badge>
                       ))}

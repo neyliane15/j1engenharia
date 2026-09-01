@@ -65,7 +65,7 @@ export default function AdminQuotations() {
                     <Tr key={q.id}>
                       <Td>
                         <span className="block font-medium">{q.title}</span>
-                        <span className="num mt-0.5 block text-xs text-muted-foreground">{q.code}</span>
+                        <span className="num mt-1 block text-xs text-muted-foreground">{q.code}</span>
                       </Td>
                       <Td className="text-muted-foreground">{q.buyerCompany?.name}</Td>
                       <Td className="text-muted-foreground">{q.createdBy?.name}</Td>

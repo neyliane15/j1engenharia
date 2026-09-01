@@ -38,13 +38,13 @@ export default function AdminSettings() {
           <CardHeader title="Integração com o n8n" description="Endereços que o n8n chama nesta instalação" />
           <CardBody className="space-y-3">
             <p className="text-sm text-muted-foreground">
-              Base da API: <code className="num rounded bg-secondary px-1.5 py-0.5 text-foreground">{BASE_URL}</code>
+              Base da API: <code className="num rounded bg-secondary px-2 py-1 text-foreground">{BASE_URL}</code>
             </p>
             <ul className="space-y-2">
               {WEBHOOKS.map(([method, path, desc]) => (
                 <li key={path} className="rounded-md border border-border bg-secondary/30 p-3">
                   <p className="flex flex-wrap items-center gap-2">
-                    <Badge tone="primary">{method}</Badge>
+                    <Badge tone="neutral">{method}</Badge>
                     <code className="num text-[13px] text-foreground">{path}</code>
                   </p>
                   <p className="mt-1 text-xs text-muted-foreground">{desc}</p>
@@ -64,7 +64,7 @@ export default function AdminSettings() {
           <CardBody>
             <ul className="divide-y divide-border">
               {COMMANDS.map(([cmd, desc]) => (
-                <li key={cmd} className="flex items-baseline justify-between gap-4 py-2.5">
+                <li key={cmd} className="flex items-baseline justify-between gap-4 py-2">
                   <code className="num rounded bg-secondary px-2 py-1 text-[13px] font-medium text-foreground">{cmd}</code>
                   <span className="text-right text-xs text-muted-foreground">{desc}</span>
                 </li>
@@ -89,7 +89,7 @@ export default function AdminSettings() {
               'O vencedor recebe o aviso no WhatsApp com o link da planilha XLSX dos produtos aprovados.',
             ].map((step, i) => (
               <li key={i} className="flex gap-3">
-                <span className="num flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-semibold text-primary-foreground">
+                <span className="num flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-medium text-primary-foreground">
                   {i + 1}
                 </span>
                 <span className="text-sm leading-relaxed text-foreground">{step}</span>

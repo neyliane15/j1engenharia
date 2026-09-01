@@ -388,11 +388,7 @@ export async function handleInboundMessage(payload: InboundPayload): Promise<Bot
 
   if (result.submit) {
     if (summary.missing.length) {
-      const reply = [
-        '⚠️ Ainda não dá para enviar.',
-        '',
-        T.summaryMessage(summary),
-      ].join('\n');
+      const reply = ['Ainda faltam itens sem preço para enviar.', '', T.summaryMessage(summary)].join('\n');
       await sendWhatsApp({ phone, body: reply, quotationId: invite.quotationId, inviteId: invite.id });
       return { handled: true, reply, bidId: bid.id, inviteId: invite.id, action: 'submit_blocked' };
     }
@@ -418,9 +414,9 @@ export async function handleInboundMessage(payload: InboundPayload): Promise<Bot
   }
 
   // Qualquer alteração ou pedido de resumo devolve o espelho da proposta.
-  const head = result.applied.length ? `✅ Registrado: ${result.applied.join(', ')}.\n\n` : '';
+  const head = result.applied.length ? `Registrado: ${result.applied.join(', ')}.\n\n` : '';
   const warn = result.invalidPositions.length
-    ? `\n\n⚠️ Não existe item ${result.invalidPositions.join(', ')} nesta cotação (são ${summary.lines.length} itens).`
+    ? `\n\nNão existe item ${result.invalidPositions.join(', ')} nesta cotação. São ${summary.lines.length} itens.`
     : '';
   const reply = `${head}${T.summaryMessage(summary)}${warn}`;
 

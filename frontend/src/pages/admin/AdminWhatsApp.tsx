@@ -24,13 +24,22 @@ interface Message {
   quotation?: { code: string; title: string } | null;
 }
 
-const STATUS_TONE: Record<string, 'neutral' | 'primary' | 'success' | 'warning' | 'danger'> = {
+const STATUS_TONE: Record<string, 'neutral' | 'pending' | 'approved' | 'rejected'> = {
   QUEUED: 'neutral',
-  SENT: 'primary',
-  DELIVERED: 'success',
-  READ: 'success',
-  RECEIVED: 'primary',
-  FAILED: 'danger',
+  SENT: 'neutral',
+  DELIVERED: 'approved',
+  READ: 'approved',
+  RECEIVED: 'neutral',
+  FAILED: 'rejected',
+};
+
+const STATUS_LABEL: Record<string, string> = {
+  QUEUED: 'Na fila',
+  SENT: 'Enviada',
+  DELIVERED: 'Entregue',
+  READ: 'Lida',
+  RECEIVED: 'Recebida',
+  FAILED: 'Falhou',
 };
 
 export default function AdminWhatsApp() {
@@ -63,7 +72,7 @@ export default function AdminWhatsApp() {
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               placeholder="Filtrar por telefone"
-              className="pl-9"
+              className="pl-8"
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
             />
@@ -107,7 +116,7 @@ export default function AdminWhatsApp() {
             {data.data.map((m) => {
               const outbound = m.direction === 'OUTBOUND';
               return (
-                <li key={m.id} className="px-5 py-4">
+                <li key={m.id} className="px-6 py-4">
                   <div className="flex flex-wrap items-center gap-2">
                     <span
                       className={cn(
@@ -118,14 +127,14 @@ export default function AdminWhatsApp() {
                       {outbound ? <ArrowUpRight className="h-3.5 w-3.5" /> : <ArrowDownLeft className="h-3.5 w-3.5" />}
                     </span>
                     <span className="num text-sm font-medium text-foreground">{formatPhone(m.phone)}</span>
-                    <Badge tone={STATUS_TONE[m.status] ?? 'neutral'}>{m.status}</Badge>
+                    <Badge tone={STATUS_TONE[m.status] ?? 'neutral'}>{STATUS_LABEL[m.status] ?? m.status}</Badge>
                     {m.template && <Badge tone="outline">{m.template}</Badge>}
                     {m.quotation && <Badge tone="outline" className="num">{m.quotation.code}</Badge>}
                     <span className="num ml-auto text-xs text-muted-foreground">{formatDateTime(m.createdAt)}</span>
                   </div>
 
                   {m.body && (
-                    <pre className="mt-2.5 max-h-40 overflow-y-auto whitespace-pre-wrap rounded-md border border-border bg-secondary/40 p-3 font-sans text-[13px] leading-relaxed text-foreground">
+                    <pre className="mt-2 max-h-40 overflow-y-auto whitespace-pre-wrap rounded-md border border-border bg-secondary/40 p-3 font-sans text-[13px] leading-relaxed text-foreground">
                       {m.body}
                     </pre>
                   )}

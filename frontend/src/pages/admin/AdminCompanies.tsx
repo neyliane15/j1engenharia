@@ -71,7 +71,7 @@ export default function AdminCompanies() {
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               placeholder="Buscar por nome ou cidade"
-              className="pl-9"
+              className="pl-8"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
@@ -108,17 +108,17 @@ export default function AdminCompanies() {
                   <Tr key={c.id}>
                     <Td>
                       <span className="block font-medium text-foreground">{c.tradeName || c.name}</span>
-                      <span className="num mt-0.5 block text-xs text-muted-foreground">{formatCNPJ(c.cnpj)}</span>
+                      <span className="num mt-1 block text-xs text-muted-foreground">{formatCNPJ(c.cnpj)}</span>
                       {c.supplierProfile?.categories.length ? (
-                        <span className="mt-1.5 flex flex-wrap gap-1">
+                        <span className="mt-2 flex flex-wrap gap-1">
                           {c.supplierProfile.categories.slice(0, 3).map((cat) => (
-                            <Badge key={cat} tone="outline" className="px-1.5 py-0 text-[10px]">{cat}</Badge>
+                            <Badge key={cat} tone="outline" className="px-2 py-0 text-[10px]">{cat}</Badge>
                           ))}
                         </span>
                       ) : null}
                     </Td>
                     <Td>
-                      <Badge tone={c.type === 'BUYER' ? 'primary' : 'neutral'}>
+                      <Badge tone={c.type === 'BUYER' ? 'neutral' : 'neutral'}>
                         {c.type === 'BUYER' ? 'Comprador' : 'Fornecedor'}
                       </Badge>
                     </Td>
@@ -126,7 +126,7 @@ export default function AdminCompanies() {
                     <Td className="num text-muted-foreground">{formatPhone(c.whatsapp ?? c.phone)}</Td>
                     <Td numeric>{c._count?.users ?? 0}</Td>
                     <Td>
-                      <Badge tone={c.active ? 'success' : 'warning'} dot>{c.active ? 'Ativa' : 'Inativa'}</Badge>
+                      <Badge tone={c.active ? 'approved' : 'pending'}>{c.active ? 'Ativa' : 'Inativa'}</Badge>
                     </Td>
                     <Td>
                       <div className="flex justify-end">
@@ -211,7 +211,7 @@ export default function AdminCompanies() {
           />
         </form>
 
-        <div className="mt-5 flex justify-end gap-2">
+        <div className="mt-6 flex justify-end gap-2">
           <Button variant="outline" onClick={() => setOpen(false)}>Cancelar</Button>
           <Button type="submit" form="create-company" loading={create.isPending}>Cadastrar</Button>
         </div>

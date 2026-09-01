@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" fill="none" role="img" aria-label="Emptra">
+  <title>Emptra</title>
+  <!-- Cor única herdada do contexto: fundo escuro, impressão, gravação. -->
+  <g stroke="currentColor" stroke-width="5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M30 10H14v28h13"/>
+    <path d="M14 24h22.5"/>
+  </g>
+</svg>

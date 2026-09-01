@@ -208,11 +208,11 @@ export function FunnelBars({ data }: { data: { stage: string; value: number }[] 
         <div key={d.stage}>
           <div className="mb-1 flex items-baseline justify-between text-sm">
             <span className="text-muted-foreground">{d.stage}</span>
-            <span className="num font-semibold text-foreground">{d.value}</span>
+            <span className="num font-medium text-foreground">{d.value}</span>
           </div>
           <div className="h-2.5 overflow-hidden rounded-full bg-secondary">
             <div
-              className="h-full rounded-full transition-all duration-500"
+              className="h-full rounded-full"
               style={{ width: `${(d.value / max) * 100}%`, background: SERIES_COLORS[i % SERIES_COLORS.length] }}
             />
           </div>

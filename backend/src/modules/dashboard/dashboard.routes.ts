@@ -171,9 +171,11 @@ dashboardRouter.get(
       include: { quotationItem: { select: { description: true, unit: true } } },
     });
 
+    // Sentence case: o rótulo vai direto para a legenda do gráfico.
     const byCategory = new Map<string, number>();
     for (const ai of awardItems) {
-      const key = ai.quotationItem.description.split(/[\s,\-–]/)[0].toUpperCase().slice(0, 24) || 'OUTROS';
+      const first = ai.quotationItem.description.split(/[\s,\-–]/)[0].slice(0, 24);
+      const key = first ? first[0].toUpperCase() + first.slice(1).toLowerCase() : 'Outros';
       byCategory.set(key, round((byCategory.get(key) ?? 0) + toNumber(ai.total)));
     }
     const categories = [...byCategory.entries()]

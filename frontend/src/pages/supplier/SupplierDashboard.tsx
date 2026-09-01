@@ -48,7 +48,6 @@ export default function SupplierDashboard() {
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard
-          accent
           label="Faturamento aprovado"
           value={formatMoney(kpis.revenue)}
           hint={`${kpis.orders} ${kpis.orders === 1 ? 'pedido' : 'pedidos'} nos últimos 12 meses`}
@@ -93,17 +92,17 @@ export default function SupplierDashboard() {
                 <li key={i.inviteId}>
                   <Link
                     to={`/fornecedor/cotacoes/${i.quotation.id}`}
-                    className="flex flex-wrap items-center justify-between gap-3 px-5 py-4 transition-colors hover:bg-secondary/40"
+                    className="flex flex-wrap items-center justify-between gap-3 px-6 py-4 transition-colors hover:bg-secondary/40"
                   >
                     <div className="min-w-0">
                       <p className="truncate text-sm font-medium text-foreground">{i.quotation.title}</p>
-                      <p className="num mt-0.5 text-xs text-muted-foreground">
+                      <p className="num mt-1 text-xs text-muted-foreground">
                         {i.quotation.code} · {i.quotation.buyerCompany.name} · {i.quotation._count.items} itens
                       </p>
                     </div>
                     <span
                       className={cn(
-                        'flex items-center gap-1.5 text-xs font-medium',
+                        'flex items-center gap-2 text-xs font-medium',
                         deadline.tone === 'late' && 'text-destructive',
                         deadline.tone === 'warn' && 'text-warning',
                         deadline.tone === 'ok' && 'text-muted-foreground',
@@ -177,7 +176,7 @@ export default function SupplierDashboard() {
                       <Tr key={c.clientId}>
                         <Td className="font-medium">{c.name}</Td>
                         <Td numeric>{c.orders}</Td>
-                        <Td numeric className="font-semibold">{formatMoney(c.revenue)}</Td>
+                        <Td numeric className="font-medium">{formatMoney(c.revenue)}</Td>
                         <Td className="num text-muted-foreground">{formatDate(c.lastAt)}</Td>
                       </Tr>
                     ))}
@@ -214,15 +213,15 @@ export default function SupplierDashboard() {
             {recentAwards.length ? (
               <ul className="divide-y divide-border">
                 {recentAwards.slice(0, 5).map((a) => (
-                  <li key={a.id} className="flex items-center justify-between gap-4 px-5 py-3">
+                  <li key={a.id} className="flex items-center justify-between gap-4 px-6 py-3">
                     <div className="min-w-0">
                       <p className="truncate text-sm font-medium">{a.quotation.buyerCompany.name}</p>
-                      <p className="num mt-0.5 text-xs text-muted-foreground">
+                      <p className="num mt-1 text-xs text-muted-foreground">
                         {a.quotation.code} · {a.itemCount} itens · {formatDate(a.createdAt)}
                       </p>
                     </div>
                     <div className="flex shrink-0 items-center gap-2">
-                      <span className="num text-sm font-semibold">{formatMoney(a.total)}</span>
+                      <span className="num text-sm font-medium">{formatMoney(a.total)}</span>
                       <Button
                         size="sm"
                         variant="outline"

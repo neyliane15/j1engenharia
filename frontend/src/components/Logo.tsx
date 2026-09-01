@@ -2,46 +2,55 @@ import { cn } from '@/lib/utils';
 
 interface LogoProps {
   className?: string;
-  /** 'full' mostra o monograma e o nome; 'mark' só o monograma. */
-  variant?: 'full' | 'mark';
-  /** 'light' para fundos escuros (sidebar), 'dark' para fundos claros. */
+  /** 'assinatura' = símbolo + logotipo; 'simbolo' = só o símbolo. */
+  variant?: 'assinatura' | 'simbolo';
+  /** 'light' para fundo petróleo, 'dark' para fundo claro. */
   tone?: 'light' | 'dark';
-  showTagline?: boolean;
 }
 
 /**
  * Marca do Emptra.
  *
- * O monograma é um "E" construído em barras — a leitura de plantas e níveis —
- * com o ponto em primary marcando o item cotado. Para trocar pela logomarca
- * oficial, substitua apenas o <svg> abaixo mantendo o viewBox 0 0 64 64.
+ * O símbolo é um "E" construído como três linhas de uma tabela de cotação.
+ * Os braços têm comprimentos diferentes, como itens de uma lista, e o do meio
+ * é o mais longo, ultrapassando os demais em teal: é a proposta escolhida.
+ *
+ * Construção na malha 48×48, traço 5, extremidades e junções arredondadas —
+ * haste em x=14 (y=10 a 38), braço superior até x=30, médio até x=36,5,
+ * inferior até x=27. Não redesenhe à mão; os arquivos vivem em
+ * `public/brand/`.
  */
-export function Logo({ className, variant = 'full', tone = 'dark', showTagline = false }: LogoProps) {
-  const nameColor = tone === 'light' ? 'text-white' : 'text-brand-deep';
-  const taglineColor = tone === 'light' ? 'text-sidebar-foreground/70' : 'text-muted-foreground';
+export function Logo({ className, variant = 'assinatura', tone = 'dark' }: LogoProps) {
+  const light = tone === 'light';
 
   return (
-    <span className={cn('inline-flex items-center gap-2.5', className)}>
+    <span className={cn('inline-flex items-center gap-3', className)}>
       <svg
-        viewBox="0 0 64 64"
-        className="h-9 w-9 shrink-0"
+        viewBox="0 0 48 48"
+        fill="none"
+        className="h-8 w-8 shrink-0"
         role="img"
         aria-label="Emptra"
         xmlns="http://www.w3.org/2000/svg"
       >
-        <rect width="64" height="64" rx="14" fill="hsl(var(--brand-deep))" />
-        <path d="M20 18h26v7H27v6.5h17v7H27V45h19v7H20z" fill="hsl(var(--primary))" />
-        <circle cx="46" cy="21.5" r="3.5" fill="hsl(var(--background))" />
+        <path
+          d="M30 10H14v28h13"
+          stroke={light ? 'hsl(var(--sidebar-foreground))' : 'hsl(var(--brand-deep))'}
+          strokeWidth="5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+        <path
+          d="M14 24h22.5"
+          stroke={light ? 'hsl(var(--teal-claro, var(--primary)))' : 'hsl(var(--primary))'}
+          strokeWidth="5"
+          strokeLinecap="round"
+        />
       </svg>
 
-      {variant === 'full' && (
-        <span className="flex flex-col leading-none">
-          <span className={cn('brand-type text-xl tracking-tight', nameColor)}>Emptra</span>
-          {showTagline && (
-            <span className={cn('mt-0.5 text-[11px] font-medium tracking-wide', taglineColor)}>
-              Cotações para obras
-            </span>
-          )}
+      {variant === 'assinatura' && (
+        <span className={cn('brand-type text-[22px] leading-none', light ? 'text-white' : 'text-brand-deep')}>
+          Emptra
         </span>
       )}
     </span>

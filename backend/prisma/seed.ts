@@ -100,8 +100,8 @@ async function main() {
 
   const projects = await Promise.all(
     [
-      { name: 'Residencial Alto da Serra', code: 'OBRA-001', address: 'Av. Serra Azul, 400 — Cotia/SP' },
-      { name: 'Retrofit Edifício Marambaia', code: 'OBRA-002', address: 'R. Marambaia, 88 — São Paulo/SP' },
+      { name: 'Residencial Alto da Serra', code: 'CC-001', address: 'Av. Serra Azul, 400 — Cotia/SP' },
+      { name: 'Retrofit Edifício Marambaia', code: 'CC-002', address: 'R. Marambaia, 88 — São Paulo/SP' },
     ].map((p) =>
       prisma.project.upsert({
         where: { id: `${buyerCompany.id.slice(0, 8)}-${p.code}` },

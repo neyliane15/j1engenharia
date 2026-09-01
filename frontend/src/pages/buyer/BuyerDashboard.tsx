@@ -41,7 +41,6 @@ export default function BuyerDashboard() {
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard
-          accent
           label="Economia gerada"
           value={formatMoney(kpis.totalSavings)}
           hint={`${formatPercent(kpis.savingsPct)} abaixo da média das propostas`}
@@ -128,7 +127,7 @@ export default function BuyerDashboard() {
                         <Td numeric className="text-success">{formatMoney(s.savings)}</Td>
                         <Td numeric>{formatPercent(s.responseRate, 0)}</Td>
                         <Td numeric>
-                          <Badge tone={s.winRate >= 50 ? 'success' : 'neutral'}>{formatPercent(s.winRate, 0)}</Badge>
+                          <Badge tone={s.winRate >= 50 ? 'approved' : 'neutral'}>{formatPercent(s.winRate, 0)}</Badge>
                         </Td>
                       </Tr>
                     ))}
@@ -164,11 +163,11 @@ export default function BuyerDashboard() {
                     <li key={q.id}>
                       <Link
                         to={`/comprador/cotacoes/${q.id}`}
-                        className="flex items-center justify-between gap-4 px-5 py-3.5 transition-colors hover:bg-secondary/40"
+                        className="flex items-center justify-between gap-4 px-6 py-3 transition-colors hover:bg-secondary/40"
                       >
                         <div className="min-w-0">
                           <p className="truncate text-sm font-medium text-foreground">{q.title}</p>
-                          <p className="num mt-0.5 text-xs text-muted-foreground">
+                          <p className="num mt-1 text-xs text-muted-foreground">
                             {q.code} · {q._count.bids}/{q._count.invites} responderam
                           </p>
                         </div>
@@ -209,15 +208,15 @@ export default function BuyerDashboard() {
             {recentAwards.length ? (
               <ul className="divide-y divide-border">
                 {recentAwards.slice(0, 5).map((a) => (
-                  <li key={a.id} className="flex items-center justify-between gap-4 px-5 py-3">
+                  <li key={a.id} className="flex items-center justify-between gap-4 px-6 py-3">
                     <div className="min-w-0">
                       <p className="truncate text-sm font-medium text-foreground">{a.supplier}</p>
-                      <p className="num mt-0.5 text-xs text-muted-foreground">
+                      <p className="num mt-1 text-xs text-muted-foreground">
                         {a.quotation.code} · {formatDate(a.createdAt)}
                       </p>
                     </div>
                     <div className="shrink-0 text-right">
-                      <p className="num text-sm font-semibold text-foreground">{formatMoney(a.total)}</p>
+                      <p className="num text-sm font-medium text-foreground">{formatMoney(a.total)}</p>
                       <p className="num text-xs text-success">−{formatMoney(a.savings)}</p>
                     </div>
                   </li>

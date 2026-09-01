@@ -5,14 +5,18 @@ import { round, toNumber } from '../utils/money';
 import { buildComparison } from './quotation.service';
 
 // Paleta Emptra em ARGB para o Excel
+// Paleta do manual da marca, em ARGB para o Excel.
 const BRAND = {
-  deep: 'FF0C2F2C',
-  primary: 'FF12A594',
-  soft: 'FFE7EFED',
-  line: 'FFD3DEDB',
-  ink: 'FF0A1614',
+  deep: 'FF0C2F2C',      // petróleo
+  primary: 'FF12A594',   // teal — cor de ação
+  soft: 'FFE7EFED',      // superfície
+  line: 'FFD3DEDB',      // borda
+  ink: 'FF0A1614',       // texto
+  support: 'FF6E7E7C',   // apoio
   white: 'FFFFFFFF',
-  warning: 'FFB4791C',
+  // Estados: fundo tingido e texto escuro da mesma família.
+  approvedBg: 'FFD5F0EB',
+  approvedFg: 'FF0A5B51',
 };
 
 function styleHeader(row: ExcelJS.Row, fill = BRAND.deep, color = BRAND.white) {
@@ -50,7 +54,7 @@ function titleBlock(ws: ExcelJS.Worksheet, lastColumn: number, title: string, su
   const end = columnLetter(Math.max(1, lastColumn));
 
   const blocks: [number, string, Partial<ExcelJS.Font>, number][] = [
-    [1, 'EMPTRA', { name: 'Georgia', bold: true, size: 18, color: { argb: BRAND.primary } }, 32],
+    [1, 'Emptra', { name: 'Newsreader', bold: true, size: 18, color: { argb: BRAND.primary } }, 32],
     [2, title, { bold: true, size: 13, color: { argb: BRAND.ink } }, 22],
     [3, subtitle, { size: 10, color: { argb: 'FF6E7E7C' } }, 18],
   ];
@@ -123,7 +127,7 @@ export async function buildSupplierAwardWorkbook(awardId: string): Promise<{ buf
     8,
     `Pedido aprovado · ${award.quotation.code}`,
     `${award.quotation.title} — cliente: ${award.quotation.buyerCompany.name}` +
-      (award.quotation.project ? ` · obra: ${award.quotation.project.name}` : ''),
+      (award.quotation.project ? ` · centro de custo: ${award.quotation.project.name}` : ''),
   );
 
   ws.getCell('A4').value = `Fornecedor: ${award.supplierCompany.name}`;
@@ -250,11 +254,12 @@ export async function buildComparisonWorkbook(quotationId: string): Promise<{ bu
       cellRef.numFmt = MONEY;
       const supplierCell = row.cells.find((c) => c.bidId === comparison.suppliers[i].bidId);
       if (supplierCell?.isBest) {
-        cellRef.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: BRAND.soft } };
-        cellRef.font = { bold: true, color: { argb: BRAND.deep } };
+        // Melhor preço usa a família "aprovado", não o teal: o teal é ação.
+        cellRef.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: BRAND.approvedBg } };
+        cellRef.font = { bold: true, color: { argb: BRAND.approvedFg } };
       } else if (!supplierCell?.available) {
         cellRef.value = '—';
-        cellRef.font = { color: { argb: 'FF9AA8A6' } };
+        cellRef.font = { color: { argb: BRAND.support } };
       }
     }
     excelRow.getCell(5 + comparison.suppliers.length).numFmt = MONEY;

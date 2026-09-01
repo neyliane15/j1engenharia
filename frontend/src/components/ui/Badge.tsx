@@ -1,34 +1,37 @@
 import type { HTMLAttributes } from 'react';
 import { cn } from '@/lib/utils';
 
-type Tone = 'neutral' | 'primary' | 'success' | 'warning' | 'danger' | 'deep' | 'outline';
+/**
+ * Chip de status e rótulo.
+ *
+ * Os estados usam família própria, fora do teal — fundo tingido e texto
+ * escuro da mesma família. Nunca texto branco sobre cor saturada, que é o
+ * visual de sistema antigo, e nunca teal, que é cor de ação.
+ */
+type Tone = 'neutral' | 'pending' | 'approved' | 'rejected' | 'outline';
 
 const tones: Record<Tone, string> = {
-  neutral: 'bg-secondary text-secondary-foreground border-border',
-  primary: 'bg-primary/10 text-primary border-primary/25',
-  success: 'bg-success/10 text-success border-success/25',
-  warning: 'bg-warning/12 text-warning border-warning/30',
-  danger: 'bg-destructive/10 text-destructive border-destructive/25',
-  deep: 'bg-brand-deep text-brand-deep-foreground border-brand-deep',
+  neutral: 'bg-state-neutral text-state-neutral-foreground border-transparent',
+  pending: 'bg-state-pending text-state-pending-foreground border-transparent',
+  approved: 'bg-state-approved text-state-approved-foreground border-transparent',
+  rejected: 'bg-state-rejected text-state-rejected-foreground border-transparent',
   outline: 'bg-transparent text-muted-foreground border-border',
 };
 
 interface BadgeProps extends HTMLAttributes<HTMLSpanElement> {
   tone?: Tone;
-  dot?: boolean;
 }
 
-export function Badge({ className, tone = 'neutral', dot, children, ...props }: BadgeProps) {
+export function Badge({ className, tone = 'neutral', children, ...props }: BadgeProps) {
   return (
     <span
       className={cn(
-        'inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-medium leading-5',
+        'inline-flex items-center gap-2 rounded-chip border px-3 py-1 text-[13px] font-medium leading-4',
         tones[tone],
         className,
       )}
       {...props}
     >
-      {dot && <span className="h-1.5 w-1.5 rounded-full bg-current" aria-hidden />}
       {children}
     </span>
   );

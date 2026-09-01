@@ -1,54 +1,61 @@
 import { Badge } from './Badge';
 import type { BidStatus, InviteStatus, QuotationStatus, UserStatus } from '@/types';
 
-const quotation: Record<QuotationStatus, { label: string; tone: 'neutral' | 'primary' | 'success' | 'warning' | 'danger' | 'deep' }> = {
+/**
+ * Nenhum estado depende só de cor: todo chip carrega o rótulo escrito, porque
+ * parte dos engenheiros tem alguma deficiência de percepção de cor e porque a
+ * tabela vai ser impressa em preto e branco em algum momento.
+ */
+type Tone = 'neutral' | 'pending' | 'approved' | 'rejected';
+
+const quotation: Record<QuotationStatus, { label: string; tone: Tone }> = {
   DRAFT: { label: 'Rascunho', tone: 'neutral' },
-  SENT: { label: 'Enviada', tone: 'primary' },
-  RECEIVING: { label: 'Recebendo propostas', tone: 'primary' },
-  CLOSED: { label: 'Em análise', tone: 'warning' },
-  AWARDED: { label: 'Aprovada', tone: 'success' },
-  CANCELLED: { label: 'Cancelada', tone: 'danger' },
+  SENT: { label: 'Em cotação', tone: 'neutral' },
+  RECEIVING: { label: 'Em cotação', tone: 'neutral' },
+  CLOSED: { label: 'Aguardando aprovação', tone: 'pending' },
+  AWARDED: { label: 'Aprovada', tone: 'approved' },
+  CANCELLED: { label: 'Cancelada', tone: 'rejected' },
 };
 
-const bid: Record<BidStatus, { label: string; tone: 'neutral' | 'primary' | 'success' | 'warning' | 'danger' }> = {
+const bid: Record<BidStatus, { label: string; tone: Tone }> = {
   DRAFT: { label: 'Rascunho', tone: 'neutral' },
-  SUBMITTED: { label: 'Enviada', tone: 'primary' },
-  APPROVED: { label: 'Aprovada', tone: 'success' },
-  REJECTED: { label: 'Não aprovada', tone: 'danger' },
-  WITHDRAWN: { label: 'Recusada', tone: 'neutral' },
+  SUBMITTED: { label: 'Enviada', tone: 'neutral' },
+  APPROVED: { label: 'Aprovada', tone: 'approved' },
+  REJECTED: { label: 'Recusada', tone: 'rejected' },
+  WITHDRAWN: { label: 'Retirada', tone: 'neutral' },
 };
 
-const invite: Record<InviteStatus, { label: string; tone: 'neutral' | 'primary' | 'success' | 'warning' | 'danger' }> = {
+const invite: Record<InviteStatus, { label: string; tone: Tone }> = {
   PENDING: { label: 'Aguardando envio', tone: 'neutral' },
-  SENT: { label: 'Enviado', tone: 'primary' },
-  VIEWED: { label: 'Visualizado', tone: 'primary' },
-  RESPONDED: { label: 'Respondeu', tone: 'success' },
-  DECLINED: { label: 'Recusou', tone: 'danger' },
-  EXPIRED: { label: 'Expirou', tone: 'warning' },
+  SENT: { label: 'Enviado', tone: 'neutral' },
+  VIEWED: { label: 'Visualizado', tone: 'neutral' },
+  RESPONDED: { label: 'Respondeu', tone: 'approved' },
+  DECLINED: { label: 'Recusou', tone: 'rejected' },
+  EXPIRED: { label: 'Expirou', tone: 'pending' },
 };
 
-const user: Record<UserStatus, { label: string; tone: 'neutral' | 'success' | 'warning' | 'danger' }> = {
-  PENDING: { label: 'Aguardando liberação', tone: 'warning' },
-  ACTIVE: { label: 'Ativo', tone: 'success' },
-  SUSPENDED: { label: 'Suspenso', tone: 'danger' },
+const user: Record<UserStatus, { label: string; tone: Tone }> = {
+  PENDING: { label: 'Aguardando liberação', tone: 'pending' },
+  ACTIVE: { label: 'Ativo', tone: 'approved' },
+  SUSPENDED: { label: 'Suspenso', tone: 'rejected' },
 };
 
 export function QuotationStatusBadge({ status }: { status: QuotationStatus }) {
   const s = quotation[status];
-  return <Badge tone={s.tone} dot>{s.label}</Badge>;
+  return <Badge tone={s.tone}>{s.label}</Badge>;
 }
 
 export function BidStatusBadge({ status }: { status: BidStatus }) {
   const s = bid[status];
-  return <Badge tone={s.tone} dot>{s.label}</Badge>;
+  return <Badge tone={s.tone}>{s.label}</Badge>;
 }
 
 export function InviteStatusBadge({ status }: { status: InviteStatus }) {
   const s = invite[status];
-  return <Badge tone={s.tone} dot>{s.label}</Badge>;
+  return <Badge tone={s.tone}>{s.label}</Badge>;
 }
 
 export function UserStatusBadge({ status }: { status: UserStatus }) {
   const s = user[status];
-  return <Badge tone={s.tone} dot>{s.label}</Badge>;
+  return <Badge tone={s.tone}>{s.label}</Badge>;
 }

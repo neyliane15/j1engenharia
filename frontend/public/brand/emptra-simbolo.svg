@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" fill="none" role="img" aria-label="Emptra">
+  <title>Emptra</title>
+  <!-- Malha 48x48 · traço 5 · extremidades e junções arredondadas.
+       Haste x=14 (y=10 a 38) · braço superior até x=30 · braço inferior até x=27. -->
+  <path d="M30 10H14v28h13" stroke="#0C2F2C" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Braço médio, o mais longo, até x=36,5: a proposta escolhida. -->
+  <path d="M14 24h22.5" stroke="#12A594" stroke-width="5" stroke-linecap="round"/>
+</svg>

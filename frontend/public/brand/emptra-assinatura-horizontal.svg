@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 208 48" fill="none" role="img" aria-label="Emptra">
+  <title>Emptra</title>
+  <!-- ATENÇÃO: o logotipo usa <text> com Newsreader. Funciona na web porque a
+       fonte é carregada. Antes de imprimir ou enviar a terceiros, converta o
+       texto em curvas. O símbolo é path puro e não tem esse problema. -->
+  <path d="M30 10H14v28h13" stroke="#0C2F2C" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M14 24h22.5" stroke="#12A594" stroke-width="5" stroke-linecap="round"/>
+  <text x="56" y="33" font-family="Newsreader, Georgia, serif" font-size="30" font-weight="600"
+        letter-spacing="-0.15" fill="#0C2F2C">Emptra</text>
+</svg>

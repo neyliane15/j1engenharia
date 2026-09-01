@@ -9,7 +9,7 @@ import { requireCompany, requireRole } from '../../middlewares/rbac';
 export const projectsRouter = Router();
 projectsRouter.use(authenticate, requireCompany, requireRole('BUYER'));
 
-/** GET /projects — obras/centros de custo do comprador. */
+/** GET /projects — centros de custo do comprador. */
 projectsRouter.get(
   '/',
   asyncHandler(async (req, res) => {

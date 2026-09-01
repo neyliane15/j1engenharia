@@ -18,9 +18,9 @@ export function inviteMessage(d: InviteTemplateData): string {
     .join('\n');
 
   return [
-    `*EMPTRA · Nova cotação ${d.quotationCode}*`,
+    `*Emptra · Nova cotação ${d.quotationCode}*`,
     '',
-    `Olá, ${d.supplierName}!`,
+    `Olá, ${d.supplierName}.`,
     `*${d.buyerName}* está cotando materiais e quer o seu preço.`,
     '',
     `*${d.quotationTitle}*`,
@@ -111,7 +111,7 @@ export function summaryMessage(d: SummaryData): string {
   if (d.paymentTerms) out.push(`Pagamento: ${d.paymentTerms}`);
 
   if (d.missing.length) {
-    out.push('', `⚠️ Faltam os itens: *${d.missing.join(', ')}*`);
+    out.push('', `Faltam os itens: *${d.missing.join(', ')}*`);
     out.push('Envie o preço deles ou use `SEM <número>` se não tiver.');
   } else {
     out.push('', 'Tudo preenchido. Envie `ENVIAR` para concluir.');
@@ -122,7 +122,7 @@ export function summaryMessage(d: SummaryData): string {
 
 export function submittedMessage(quotationCode: string, total: number, buyerName: string): string {
   return [
-    '✅ *Proposta enviada!*',
+    '*Proposta enviada*',
     '',
     `Cotação ${quotationCode} · Total ${currency(total)}`,
     `${buyerName} já recebeu a sua proposta e vai analisar.`,
@@ -140,7 +140,7 @@ export function approvedMessage(d: {
   downloadLink: string;
 }): string {
   return [
-    '🎉 *Parabéns, sua proposta foi aprovada!*',
+    '*Proposta aprovada*',
     '',
     `Cotação ${d.quotationCode} · ${d.buyerName}`,
     `${d.itemCount} ${d.itemCount === 1 ? 'item aprovado' : 'itens aprovados'} · Total *${currency(d.total)}*`,
@@ -166,12 +166,12 @@ export function rejectedMessage(quotationCode: string, buyerName: string, reason
 }
 
 export function declinedMessage(quotationCode: string): string {
-  return `Tudo bem! Registramos que você não vai participar da cotação ${quotationCode}. Até a próxima. 👋`;
+  return `Registramos que você não vai participar da cotação ${quotationCode}.`;
 }
 
 export function reminderMessage(d: { quotationCode: string; buyerName: string; hoursLeft: number; link: string }): string {
   return [
-    `⏰ *Lembrete · Cotação ${d.quotationCode}*`,
+    `*Lembrete · Cotação ${d.quotationCode}*`,
     '',
     `A cotação de ${d.buyerName} encerra em *${d.hoursLeft}h* e ainda não recebemos a sua proposta.`,
     '',
@@ -182,7 +182,7 @@ export function reminderMessage(d: { quotationCode: string; buyerName: string; h
 
 export function unknownMessage(): string {
   return [
-    'Não entendi essa mensagem. 🤔',
+    'Não reconheci nenhum comando nesta mensagem.',
     '',
     'Para cotar, envie o número do item e o preço, um por linha:',
     '`1 45,90`',

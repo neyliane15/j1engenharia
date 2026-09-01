@@ -34,11 +34,11 @@ export default function SupplierList() {
         description="Quem responde rápido, quem ganha mais e quem já trabalhou com você."
       />
 
-      <div className="relative mb-5 max-w-md">
+      <div className="relative mb-6 max-w-md">
         <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
         <Input
           placeholder="Buscar por nome, cidade ou categoria"
-          className="pl-9"
+          className="pl-8"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
@@ -61,21 +61,21 @@ export default function SupplierList() {
           {data.data.map((s) => {
             const stat = stats.get(s.id);
             return (
-              <Card key={s.id} className="flex flex-col p-5">
+              <Card key={s.id} className="flex flex-col p-6">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
-                    <h3 className="truncate font-semibold text-foreground">{s.tradeName || s.name}</h3>
+                    <h3 className="truncate font-medium text-foreground">{s.tradeName || s.name}</h3>
                     {s.tradeName && <p className="truncate text-xs text-muted-foreground">{s.name}</p>}
                   </div>
                   {Number(s.supplierProfile?.rating ?? 0) > 0 && (
-                    <Badge tone="warning" className="shrink-0">
+                    <Badge tone="pending" className="shrink-0">
                       <Star className="h-3 w-3 fill-current" />
                       {Number(s.supplierProfile?.rating).toFixed(1)}
                     </Badge>
                   )}
                 </div>
 
-                <div className="mt-3 space-y-1.5 text-sm text-muted-foreground">
+                <div className="mt-3 space-y-2 text-sm text-muted-foreground">
                   <p className="flex items-center gap-2">
                     <MapPin className="h-3.5 w-3.5 shrink-0" />
                     {[s.city, s.state].filter(Boolean).join('/') || 'Localização não informada'}
@@ -87,7 +87,7 @@ export default function SupplierList() {
                 </div>
 
                 {s.supplierProfile?.categories.length ? (
-                  <div className="mt-3 flex flex-wrap gap-1.5">
+                  <div className="mt-3 flex flex-wrap gap-2">
                     {s.supplierProfile.categories.slice(0, 4).map((c) => (
                       <Badge key={c} tone="outline">{c}</Badge>
                     ))}
@@ -99,15 +99,15 @@ export default function SupplierList() {
 
                 <div className="mt-4 grid grid-cols-3 gap-2 border-t border-border pt-4 text-center">
                   <div>
-                    <p className="num text-sm font-semibold text-foreground">{formatMoney(stat?.total ?? 0)}</p>
+                    <p className="num text-sm font-medium text-foreground">{formatMoney(stat?.total ?? 0)}</p>
                     <p className="text-[11px] text-muted-foreground">comprado</p>
                   </div>
                   <div>
-                    <p className="num text-sm font-semibold text-success">{formatMoney(stat?.savings ?? 0)}</p>
+                    <p className="num text-sm font-medium text-success">{formatMoney(stat?.savings ?? 0)}</p>
                     <p className="text-[11px] text-muted-foreground">economia</p>
                   </div>
                   <div>
-                    <p className="num text-sm font-semibold text-foreground">{formatPercent(stat?.winRate ?? 0, 0)}</p>
+                    <p className="num text-sm font-medium text-foreground">{formatPercent(stat?.winRate ?? 0, 0)}</p>
                     <p className="text-[11px] text-muted-foreground">vitórias</p>
                   </div>
                 </div>

@@ -41,11 +41,11 @@ export default function AdminDashboard() {
       <PageHeader title="Visão geral" description="A saúde da plataforma inteira em um lugar." />
 
       {data.users.pending > 0 && (
-        <div className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-md border border-warning/40 bg-warning/[0.07] px-4 py-3.5">
-          <p className="flex items-center gap-2.5 text-sm text-foreground">
+        <div className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-md border border-warning/40 bg-warning/[0.07] px-4 py-3">
+          <p className="flex items-center gap-2 text-sm text-foreground">
             <UserCheck className="h-4 w-4 shrink-0 text-warning" />
             <span>
-              <strong className="font-semibold">{data.users.pending}</strong>{' '}
+              <strong className="font-medium">{data.users.pending}</strong>{' '}
               {data.users.pending === 1 ? 'cadastro aguardando' : 'cadastros aguardando'} liberação de acesso.
             </span>
           </p>
@@ -56,11 +56,11 @@ export default function AdminDashboard() {
       )}
 
       {data.whatsapp.failed > 0 && (
-        <div className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-md border border-destructive/35 bg-destructive/[0.06] px-4 py-3.5">
-          <p className="flex items-center gap-2.5 text-sm text-foreground">
+        <div className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-md border border-destructive/35 bg-destructive/[0.06] px-4 py-3">
+          <p className="flex items-center gap-2 text-sm text-foreground">
             <AlertTriangle className="h-4 w-4 shrink-0 text-destructive" />
             <span>
-              <strong className="font-semibold">{data.whatsapp.failed}</strong> mensagens de WhatsApp falharam. Verifique
+              <strong className="font-medium">{data.whatsapp.failed}</strong> mensagens de WhatsApp falharam. Verifique
               a conexão do n8n.
             </span>
           </p>
@@ -72,7 +72,6 @@ export default function AdminDashboard() {
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard
-          accent
           label="Volume transacionado"
           value={formatMoney(data.gmv.awardedTotal)}
           hint={`${data.gmv.awardCount} pedidos aprovados`}
@@ -132,7 +131,7 @@ export default function AdminDashboard() {
                     <Tr key={q.id}>
                       <Td>
                         <span className="block font-medium">{q.title}</span>
-                        <span className="num mt-0.5 block text-xs text-muted-foreground">{q.code}</span>
+                        <span className="num mt-1 block text-xs text-muted-foreground">{q.code}</span>
                       </Td>
                       <Td className="text-muted-foreground">{q.buyerCompany.name}</Td>
                       <Td><QuotationStatusBadge status={q.status} /></Td>
@@ -153,8 +152,8 @@ export default function AdminDashboard() {
         <CardHeader title="Automação de WhatsApp" description="Mensagens trocadas pela plataforma" />
         <CardBody>
           <div className="flex flex-wrap gap-3">
-            <Badge tone="primary">{data.whatsapp.total} mensagens</Badge>
-            <Badge tone={data.whatsapp.failed ? 'danger' : 'success'}>
+            <Badge tone="neutral">{data.whatsapp.total} mensagens</Badge>
+            <Badge tone={data.whatsapp.failed ? 'rejected' : 'approved'}>
               <MessageSquareText className="h-3 w-3" />
               {data.whatsapp.failed} falhas
             </Badge>

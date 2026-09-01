@@ -54,7 +54,7 @@ export default function QuotationList() {
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               placeholder="Buscar por título ou código (COT-2025-0001)"
-              className="pl-9"
+              className="pl-8"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
@@ -87,7 +87,7 @@ export default function QuotationList() {
               <thead>
                 <tr>
                   <Th>Cotação</Th>
-                  <Th>Obra</Th>
+                  <Th>Centro de custo</Th>
                   <Th>Situação</Th>
                   <Th numeric>Itens</Th>
                   <Th numeric>Propostas</Th>
@@ -103,14 +103,14 @@ export default function QuotationList() {
                       <Td>
                         <Link to={`/comprador/cotacoes/${q.id}`} className="block">
                           <span className="block font-medium text-foreground hover:text-primary">{q.title}</span>
-                          <span className="num mt-0.5 block text-xs text-muted-foreground">{q.code}</span>
+                          <span className="num mt-1 block text-xs text-muted-foreground">{q.code}</span>
                         </Link>
                       </Td>
                       <Td className="text-muted-foreground">{q.project?.name ?? '—'}</Td>
                       <Td><QuotationStatusBadge status={q.status} /></Td>
                       <Td numeric>{q._count?.items ?? 0}</Td>
                       <Td numeric>
-                        <span className={cn((q._count?.bids ?? 0) > 0 && 'font-semibold text-foreground')}>
+                        <span className={cn((q._count?.bids ?? 0) > 0 && 'font-medium text-foreground')}>
                           {q._count?.bids ?? 0}
                         </span>
                         <span className="text-muted-foreground">/{q._count?.invites ?? 0}</span>

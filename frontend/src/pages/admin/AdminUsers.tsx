@@ -106,8 +106,8 @@ export default function AdminUsers() {
       />
 
       {pending.length > 0 && !status && (
-        <div className="mb-5 rounded-md border border-warning/40 bg-warning/[0.07] px-4 py-3 text-sm">
-          <strong className="font-semibold">{pending.length}</strong>{' '}
+        <div className="mb-6 rounded-md border border-warning/40 bg-warning/[0.07] px-4 py-3 text-sm">
+          <strong className="font-medium">{pending.length}</strong>{' '}
           {pending.length === 1 ? 'cadastro aguarda' : 'cadastros aguardam'} sua liberação — estão no topo da lista.
         </div>
       )}
@@ -118,7 +118,7 @@ export default function AdminUsers() {
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               placeholder="Buscar por nome, e-mail ou empresa"
-              className="pl-9"
+              className="pl-8"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
@@ -161,20 +161,20 @@ export default function AdminUsers() {
                   <Tr key={u.id}>
                     <Td>
                       <span className="block font-medium text-foreground">{u.name}</span>
-                      <span className="mt-0.5 block text-xs text-muted-foreground">{u.email}</span>
-                      {u.phone && <span className="num mt-0.5 block text-xs text-muted-foreground">{formatPhone(u.phone)}</span>}
+                      <span className="mt-1 block text-xs text-muted-foreground">{u.email}</span>
+                      {u.phone && <span className="num mt-1 block text-xs text-muted-foreground">{formatPhone(u.phone)}</span>}
                     </Td>
                     <Td className="text-muted-foreground">
                       {u.company?.name ?? '—'}
                       {u.company && !u.company.active && (
-                        <Badge tone="warning" className="ml-2">empresa inativa</Badge>
+                        <Badge tone="pending" className="ml-2">empresa inativa</Badge>
                       )}
                     </Td>
-                    <Td><Badge tone={u.role === 'ADMIN' ? 'deep' : 'outline'}>{ROLE_LABEL[u.role]}</Badge></Td>
+                    <Td><Badge tone={u.role === 'ADMIN' ? 'neutral' : 'outline'}>{ROLE_LABEL[u.role]}</Badge></Td>
                     <Td><UserStatusBadge status={u.status} /></Td>
                     <Td className="num text-muted-foreground">{u.lastLoginAt ? formatDate(u.lastLoginAt) : 'nunca'}</Td>
                     <Td>
-                      <div className="flex justify-end gap-1.5">
+                      <div className="flex justify-end gap-2">
                         {u.status !== 'ACTIVE' && (
                           <Button
                             size="sm"
@@ -264,7 +264,7 @@ export default function AdminUsers() {
           <Input name="jobTitle" label="Cargo" placeholder="Coordenador de Suprimentos" />
         </form>
 
-        <div className="mt-5 flex justify-end gap-2">
+        <div className="mt-6 flex justify-end gap-2">
           <Button variant="outline" onClick={() => setCreateOpen(false)}>Cancelar</Button>
           <Button type="submit" form="create-user" loading={create.isPending}>Criar usuário</Button>
         </div>

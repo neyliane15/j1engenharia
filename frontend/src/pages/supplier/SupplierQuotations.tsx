@@ -75,7 +75,7 @@ export default function SupplierQuotations() {
                       <Td>
                         <Link to={`/fornecedor/cotacoes/${q.id}`} className="block">
                           <span className="block font-medium text-foreground hover:text-primary">{q.title}</span>
-                          <span className="num mt-0.5 block text-xs text-muted-foreground">
+                          <span className="num mt-1 block text-xs text-muted-foreground">
                             {q.code} · {q._count?.items ?? 0} itens
                           </span>
                         </Link>

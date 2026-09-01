@@ -70,7 +70,7 @@ export default function QuotationDetail() {
     onSuccess: (r) => {
       const failed = r.dispatched.filter((d) => !d.ok);
       if (failed.length) toast.warning('Envio parcial', r.message);
-      else toast.success('Cotação enviada!', `${r.dispatched.length} fornecedores receberam no WhatsApp.`);
+      else toast.success('Cotação enviada', `${r.dispatched.length} fornecedores receberam no WhatsApp.`);
       invalidate();
     },
     onError: (e) => toast.error('Falha no envio', e instanceof ApiError ? e.message : undefined),
@@ -112,7 +112,7 @@ export default function QuotationDetail() {
     },
     onSuccess: (r) => {
       setAwardOpen(false);
-      toast.success('Cotação aprovada!', r.message);
+      toast.success('Cotação aprovada', r.message);
       invalidate();
     },
     onError: (e) => toast.error('Não foi possível aprovar', e instanceof ApiError ? e.message : undefined),
@@ -233,7 +233,6 @@ export default function QuotationDetail() {
               : 'comprando cada item pelo melhor preço'
           }
           icon={<TrendingDown className="h-4 w-4" />}
-          accent
         />
         <StatCard
           label="Economia potencial"
@@ -262,11 +261,11 @@ export default function QuotationDetail() {
                 {quotation.awards.map((a) => (
                   <Tr key={a.id}>
                     <Td className="font-medium">
-                      <Crown className="mr-1.5 inline h-4 w-4 text-warning" />
+                      <Crown className="mr-2 inline h-4 w-4 text-warning" />
                       {a.supplierCompany?.tradeName || a.supplierCompany?.name}
                     </Td>
                     <Td numeric>{a.items?.length ?? 0}</Td>
-                    <Td numeric className="font-semibold">{formatMoney(Number(a.totalAmount))}</Td>
+                    <Td numeric className="font-medium">{formatMoney(Number(a.totalAmount))}</Td>
                     <Td numeric className="text-success">{formatMoney(Number(a.savings))}</Td>
                     <Td>{formatDate(a.createdAt)}</Td>
                   </Tr>
@@ -283,7 +282,7 @@ export default function QuotationDetail() {
           title="Mapa comparativo"
           description={
             comparison?.suppliers.length
-              ? `${comparison.suppliers.length} propostas · verde marca o melhor preço de cada item`
+              ? `${comparison.suppliers.length} propostas · o fundo tingido marca o melhor preço de cada item`
               : 'Assim que as propostas chegarem, o comparativo aparece aqui'
           }
         />
@@ -317,7 +316,7 @@ export default function QuotationDetail() {
                   {comparison.suppliers.map((s) => (
                     <Th key={s.bidId} numeric className="min-w-[132px]">
                       <span className="block truncate">{s.supplierName}</span>
-                      <span className="num mt-0.5 block text-[10px] font-normal normal-case text-muted-foreground">
+                      <span className="num mt-1 block text-[10px] font-normal normal-case text-muted-foreground">
                         {s.source === 'WHATSAPP' ? 'via WhatsApp' : 'via site'}
                       </span>
                     </Th>
@@ -335,11 +334,11 @@ export default function QuotationDetail() {
                     <Tr key={row.itemId}>
                       <Td className="sticky left-0 z-10 bg-card">
                         <span className="block text-sm font-medium text-foreground">
-                          <span className="num mr-1.5 text-muted-foreground">{row.position}.</span>
+                          <span className="num mr-2 text-muted-foreground">{row.position}.</span>
                           {row.description}
                         </span>
                         {row.brandRef && (
-                          <span className="mt-0.5 block text-xs text-muted-foreground">ref. {row.brandRef}</span>
+                          <span className="mt-1 block text-xs text-muted-foreground">ref. {row.brandRef}</span>
                         )}
                       </Td>
                       <Td numeric className="text-muted-foreground">
@@ -358,23 +357,23 @@ export default function QuotationDetail() {
                           <Td
                             key={s.bidId}
                             numeric
-                            className={cn(cell.isBest && 'bg-success/[0.08] font-semibold text-success')}
+                            className={cn(cell.isBest && 'bg-state-approved font-medium text-state-approved-foreground')}
                           >
                             {formatMoney(cell.unitPrice)}
                             {!cell.isBest && cell.deltaToBestPct > 0 && (
-                              <span className="mt-0.5 block text-[11px] font-normal text-muted-foreground">
+                              <span className="mt-1 block text-[11px] font-normal text-muted-foreground">
                                 +{formatPercent(cell.deltaToBestPct, 0)}
                               </span>
                             )}
                             {cell.brand && (
-                              <span className="mt-0.5 block text-[11px] font-normal text-muted-foreground">
+                              <span className="mt-1 block text-[11px] font-normal text-muted-foreground">
                                 {cell.brand}
                               </span>
                             )}
                           </Td>
                         );
                       })}
-                      <Td numeric className={cn(saving > 0 ? 'text-success' : 'text-muted-foreground')}>
+                      <Td numeric className={cn(saving > 0 ? 'text-state-approved-foreground' : 'text-muted-foreground')}>
                         {saving > 0 ? formatMoney(saving) : '—'}
                       </Td>
                     </Tr>
@@ -383,17 +382,17 @@ export default function QuotationDetail() {
               </tbody>
               <tfoot>
                 <tr className="bg-brand-deep text-brand-deep-foreground">
-                  <td className="sticky left-0 z-10 bg-brand-deep px-4 py-3 text-sm font-semibold">Total da proposta</td>
+                  <td className="sticky left-0 z-10 bg-brand-deep px-4 py-3 text-sm font-medium">Total da proposta</td>
                   <td className="px-4 py-3" />
                   {comparison.suppliers.map((s) => (
-                    <td key={s.bidId} className="num px-4 py-3 text-right text-sm font-semibold">
+                    <td key={s.bidId} className="num px-4 py-3 text-right text-sm font-medium">
                       {formatMoney(s.total)}
                       {s.rankByTotal === 1 && (
-                        <span className="mt-0.5 block text-[11px] font-normal text-sidebar-primary">menor total</span>
+                        <span className="mt-1 block text-[11px] font-normal text-sidebar-primary">menor total</span>
                       )}
                     </td>
                   ))}
-                  <td className="num px-4 py-3 text-right text-sm font-semibold">
+                  <td className="num px-4 py-3 text-right text-sm font-medium">
                     {formatMoney(comparison.totals.potentialSavings)}
                   </td>
                 </tr>
@@ -499,7 +498,7 @@ export default function QuotationDetail() {
           </>
         }
       >
-        <div className="mb-5 grid gap-3 sm:grid-cols-2">
+        <div className="mb-6 grid gap-3 sm:grid-cols-2">
           {(
             [
               { value: 'single', icon: Crown, title: 'Fornecedor único', text: 'Tudo com um só fornecedor.' },
@@ -511,14 +510,14 @@ export default function QuotationDetail() {
               type="button"
               onClick={() => setMode(opt.value)}
               className={cn(
-                'flex items-start gap-3 rounded-md border p-3.5 text-left transition-colors',
+                'flex items-start gap-3 rounded-md border p-3 text-left transition-colors',
                 mode === opt.value ? 'border-primary bg-primary/[0.06] ring-1 ring-primary/25' : 'border-border hover:border-primary/35',
               )}
             >
-              <opt.icon className={cn('mt-0.5 h-5 w-5 shrink-0', mode === opt.value ? 'text-primary' : 'text-muted-foreground')} />
+              <opt.icon className={cn('mt-1 h-5 w-5 shrink-0', mode === opt.value ? 'text-primary' : 'text-muted-foreground')} />
               <span>
                 <span className="block text-sm font-medium">{opt.title}</span>
-                <span className="mt-0.5 block text-xs text-muted-foreground">{opt.text}</span>
+                <span className="mt-1 block text-xs text-muted-foreground">{opt.text}</span>
               </span>
             </button>
           ))}
@@ -530,7 +529,7 @@ export default function QuotationDetail() {
               <li key={s.bidId}>
                 <label
                   className={cn(
-                    'flex cursor-pointer items-center gap-3 rounded-md border p-3.5 transition-colors',
+                    'flex cursor-pointer items-center gap-3 rounded-md border p-3 transition-colors',
                     singleBid === s.bidId ? 'border-primary bg-primary/[0.06]' : 'border-border hover:border-primary/35',
                   )}
                 >
@@ -544,15 +543,15 @@ export default function QuotationDetail() {
                   <span className="min-w-0 flex-1">
                     <span className="flex items-center gap-2 text-sm font-medium text-foreground">
                       {s.supplierName}
-                      {s.rankByTotal === 1 && <Badge tone="success">menor total</Badge>}
-                      {s.itemsMissing > 0 && <Badge tone="warning">{s.itemsMissing} item(ns) sem preço</Badge>}
+                      {s.rankByTotal === 1 && <Badge tone="approved">menor total</Badge>}
+                      {s.itemsMissing > 0 && <Badge tone="pending">{s.itemsMissing} item(ns) sem preço</Badge>}
                     </span>
-                    <span className="mt-0.5 block text-xs text-muted-foreground">
+                    <span className="mt-1 block text-xs text-muted-foreground">
                       {s.deliveryDays ? `${s.deliveryDays} dias` : 'prazo não informado'} ·{' '}
                       {s.paymentTerms ?? 'pagamento não informado'} · {s.bestPriceCount} melhores preços
                     </span>
                   </span>
-                  <span className="num shrink-0 text-right text-sm font-semibold">{formatMoney(s.total)}</span>
+                  <span className="num shrink-0 text-right text-sm font-medium">{formatMoney(s.total)}</span>
                 </label>
               </li>
             ))}
@@ -575,7 +574,7 @@ export default function QuotationDetail() {
                     <Tr key={row.itemId}>
                       <Td>
                         <span className="text-sm font-medium">
-                          <span className="num mr-1.5 text-muted-foreground">{row.position}.</span>
+                          <span className="num mr-2 text-muted-foreground">{row.position}.</span>
                           {row.description}
                         </span>
                       </Td>
@@ -605,18 +604,18 @@ export default function QuotationDetail() {
           </TableWrap>
         )}
 
-        <div className="mt-5 rounded-md border border-border bg-secondary/40 p-4">
+        <div className="mt-6 rounded-md border border-border bg-secondary/40 p-4">
           <div className="flex flex-wrap items-baseline justify-between gap-3">
             <div>
               <p className="text-sm font-medium text-foreground">
                 {awardPreview.items} {awardPreview.items === 1 ? 'item' : 'itens'} ·{' '}
                 {awardPreview.suppliers} {awardPreview.suppliers === 1 ? 'fornecedor' : 'fornecedores'}
               </p>
-              <p className="mt-0.5 text-xs text-muted-foreground">
+              <p className="mt-1 text-xs text-muted-foreground">
                 Os vencedores recebem o aviso no WhatsApp com a planilha dos produtos aprovados.
               </p>
             </div>
-            <p className="num text-xl font-semibold text-foreground">{formatMoney(awardPreview.total)}</p>
+            <p className="num text-xl font-medium text-foreground">{formatMoney(awardPreview.total)}</p>
           </div>
         </div>
       </Modal>

@@ -55,6 +55,21 @@ export default {
           DEFAULT: 'hsl(var(--popover))',
           foreground: 'hsl(var(--popover-foreground))',
         },
+        state: {
+          neutral: 'hsl(var(--state-neutral))',
+          'neutral-foreground': 'hsl(var(--state-neutral-foreground))',
+          pending: 'hsl(var(--state-pending))',
+          'pending-foreground': 'hsl(var(--state-pending-foreground))',
+          approved: 'hsl(var(--state-approved))',
+          'approved-foreground': 'hsl(var(--state-approved-foreground))',
+          rejected: 'hsl(var(--state-rejected))',
+          'rejected-foreground': 'hsl(var(--state-rejected-foreground))',
+        },
+        table: {
+          header: 'hsl(var(--table-header))',
+          'header-foreground': 'hsl(var(--table-header-foreground))',
+        },
+        'row-hover': 'hsl(var(--row-hover))',
         sidebar: {
           DEFAULT: 'hsl(var(--sidebar-background))',
           foreground: 'hsl(var(--sidebar-foreground))',
@@ -67,9 +82,10 @@ export default {
         },
       },
       borderRadius: {
-        lg: 'var(--radius)',
-        md: 'calc(var(--radius) - 2px)',
-        sm: 'calc(var(--radius) - 4px)',
+        lg: 'var(--radius)',              /* 8px — card e campo */
+        md: 'calc(var(--radius) - 2px)',  /* 6px — botão */
+        sm: 'calc(var(--radius) - 4px)',  /* 4px */
+        chip: '20px',                     /* chip de status */
       },
       fontFamily: {
         sans: ['IBM Plex Sans', 'system-ui', 'sans-serif'],
@@ -95,9 +111,9 @@ export default {
         },
       },
       animation: {
-        'fade-in': 'fade-in 160ms ease-out',
-        'slide-up': 'slide-up 220ms cubic-bezier(0.16, 1, 0.3, 1)',
-        'slide-in-right': 'slide-in-right 240ms cubic-bezier(0.16, 1, 0.3, 1)',
+        'fade-in': 'fade-in 150ms ease-out',
+        'slide-up': 'slide-up 180ms ease-out',
+        'slide-in-right': 'slide-in-right 200ms ease-out',
         shimmer: 'shimmer 1.6s infinite',
       },
     },

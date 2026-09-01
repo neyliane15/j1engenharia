@@ -8,11 +8,11 @@ export default function NotFound() {
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center gap-6 bg-background px-6 text-center">
-      <Logo showTagline />
+      <Logo />
       <div>
-        <p className="num text-5xl font-semibold text-primary">404</p>
+        <p className="num text-5xl font-medium text-primary">404</p>
         <h1 className="mt-2 text-2xl">Página não encontrada</h1>
-        <p className="mt-1.5 text-sm text-muted-foreground">
+        <p className="mt-2 text-sm text-muted-foreground">
           O endereço que você abriu não existe ou foi movido.
         </p>
       </div>

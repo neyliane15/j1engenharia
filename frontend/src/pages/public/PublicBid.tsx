@@ -176,9 +176,9 @@ export default function PublicBid() {
   if (declined) {
     return (
       <PublicShell>
-        <Card className="p-10 text-center">
+        <Card className="p-8 text-center">
           <Ban className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
-          <h1 className="text-2xl">Tudo bem!</h1>
+          <h1 className="text-foreground">Participação recusada</h1>
           <p className="mt-2 text-sm text-muted-foreground">
             Registramos que você não vai participar da cotação {q.code}. Até a próxima.
           </p>
@@ -190,10 +190,10 @@ export default function PublicBid() {
   if (sent) {
     return (
       <PublicShell>
-        <Card className="p-10 text-center">
+        <Card className="p-8 text-center">
           <CheckCircle2 className="mx-auto mb-4 h-14 w-14 text-success" />
-          <h1 className="text-2xl">Proposta enviada!</h1>
-          <p className="num mt-2 text-lg font-semibold text-foreground">
+          <h1 className="text-foreground">Proposta enviada</h1>
+          <p className="num mt-2 text-lg font-medium text-foreground">
             {formatMoney(data.bid?.totalAmount || totals.total)}
           </p>
           <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
@@ -213,15 +213,15 @@ export default function PublicBid() {
     <PublicShell>
       <div className="mb-6">
         <div className="flex flex-wrap items-center gap-2">
-          <h1 className="text-2xl text-foreground">{q.title}</h1>
-          <Badge tone="primary" className="num">{q.code}</Badge>
+          <h1 className="text-foreground">{q.title}</h1>
+          <Badge tone="neutral" className="num">{q.code}</Badge>
         </div>
-        <p className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
-          <span className="flex items-center gap-1.5">
+        <p className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
+          <span className="flex items-center gap-2">
             <Building2 className="h-3.5 w-3.5" />
             {q.buyer.name}
           </span>
-          <span className="flex items-center gap-1.5">
+          <span className="flex items-center gap-2">
             <CalendarClock className="h-3.5 w-3.5" />
             responder até {formatDateTime(q.deadline)}
           </span>
@@ -258,11 +258,11 @@ export default function PublicBid() {
                     <Tr key={item.id} className={cn(line && !line.available && 'opacity-55')}>
                       <Td>
                         <span className="block text-sm font-medium">
-                          <span className="num mr-1.5 text-muted-foreground">{item.position}.</span>
+                          <span className="num mr-2 text-muted-foreground">{item.position}.</span>
                           {item.description}
                         </span>
                         {item.brandRef && (
-                          <span className="mt-0.5 block text-xs text-muted-foreground">ref. {item.brandRef}</span>
+                          <span className="mt-1 block text-xs text-muted-foreground">ref. {item.brandRef}</span>
                         )}
                       </Td>
                       <Td numeric className="whitespace-nowrap text-muted-foreground">
@@ -360,10 +360,10 @@ export default function PublicBid() {
                 placeholder="Validade da proposta, condições especiais..."
               />
 
-              <div className="rounded-md border border-border bg-secondary/40 p-3.5">
+              <div className="rounded-md border border-border bg-secondary/40 p-3">
                 <div className="flex items-baseline justify-between">
                   <span className="text-sm text-muted-foreground">Total</span>
-                  <span className="num text-lg font-semibold">{formatMoney(totals.total)}</span>
+                  <span className="num text-lg font-medium">{formatMoney(totals.total)}</span>
                 </div>
               </div>
 
@@ -408,7 +408,7 @@ export default function PublicBid() {
           <Card>
             <CardHeader title="Entrega e contato" />
             <CardBody className="space-y-2 text-sm text-muted-foreground">
-              {q.project && <p><strong className="text-foreground">Obra:</strong> {q.project.name}</p>}
+              {q.project && <p><strong className="text-foreground">Centro de custo:</strong> {q.project.name}</p>}
               {q.deliveryAddress && <p><strong className="text-foreground">Local:</strong> {q.deliveryAddress}</p>}
               {q.paymentTerms && <p><strong className="text-foreground">Pagamento desejado:</strong> {q.paymentTerms}</p>}
               <p
@@ -431,13 +431,13 @@ function PublicShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-screen bg-background">
       <header className="border-b border-border bg-card">
-        <div className="mx-auto flex h-16 max-w-6xl items-center px-5 sm:px-8">
-          <Logo showTagline />
+        <div className="mx-auto flex h-16 max-w-6xl items-center px-6 sm:px-8">
+          <Logo />
         </div>
       </header>
-      <main className="mx-auto max-w-6xl px-5 py-8 sm:px-8">{children}</main>
-      <footer className="px-5 py-8 text-center text-xs text-muted-foreground">
-        Emptra · cotações para arquitetos e engenheiros
+      <main className="mx-auto max-w-6xl px-6 py-8 sm:px-8">{children}</main>
+      <footer className="px-6 py-8 text-center text-xs text-muted-foreground">
+        Emptra · compras e cotação
       </footer>
     </div>
   );

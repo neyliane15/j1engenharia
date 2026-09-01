@@ -135,7 +135,7 @@ export default function QuotationNew() {
       if (result) {
         const sent = result.dispatched.filter((d) => d.ok).length;
         if (sent === result.dispatched.length) {
-          toast.success('Cotação enviada!', `${sent} ${sent === 1 ? 'fornecedor recebeu' : 'fornecedores receberam'} no WhatsApp.`);
+          toast.success('Cotação enviada', `${sent} ${sent === 1 ? 'fornecedor recebeu' : 'fornecedores receberam'} no WhatsApp.`);
         } else {
           toast.warning('Cotação criada', result.message);
         }
@@ -190,8 +190,8 @@ export default function QuotationNew() {
               />
 
               <div className="grid gap-4 sm:grid-cols-2">
-                <Select label="Obra / centro de custo" value={projectId} onChange={(e) => setProjectId(e.target.value)}>
-                  <option value="">Sem obra vinculada</option>
+                <Select label="Centro de custo" value={projectId} onChange={(e) => setProjectId(e.target.value)}>
+                  <option value="">Sem centro de custo</option>
                   {projects?.data.map((p) => (
                     <option key={p.id} value={p.id}>{p.name}</option>
                   ))}
@@ -210,7 +210,7 @@ export default function QuotationNew() {
               <div className="grid gap-4 sm:grid-cols-2">
                 <Input
                   label="Local de entrega"
-                  placeholder="Endereço da obra"
+                  placeholder="Endereço de entrega"
                   value={deliveryAddress}
                   onChange={(e) => setDeliveryAddress(e.target.value)}
                 />
@@ -253,7 +253,7 @@ export default function QuotationNew() {
               {items.map((item, index) => (
                 <div key={item.key} className="rounded-md border border-border bg-secondary/25 p-3">
                   <div className="mb-2 flex items-center justify-between">
-                    <span className="num flex items-center gap-1.5 text-xs font-semibold text-muted-foreground">
+                    <span className="num flex items-center gap-2 text-xs font-medium text-muted-foreground">
                       <GripVertical className="h-3.5 w-3.5" />
                       Item {index + 1}
                     </span>
@@ -324,7 +324,7 @@ export default function QuotationNew() {
                 <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
                   placeholder="Buscar por nome, cidade ou categoria"
-                  className="pl-9"
+                  className="pl-8"
                   value={supplierSearch}
                   onChange={(e) => setSupplierSearch(e.target.value)}
                 />
@@ -351,7 +351,7 @@ export default function QuotationNew() {
                         >
                           <span
                             className={cn(
-                              'mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded border transition-colors',
+                              'mt-1 flex h-5 w-5 shrink-0 items-center justify-center rounded border transition-colors',
                               active ? 'border-primary bg-primary text-primary-foreground' : 'border-border bg-card',
                             )}
                           >
@@ -361,14 +361,14 @@ export default function QuotationNew() {
                             <span className="block truncate text-sm font-medium text-foreground">
                               {s.tradeName || s.name}
                             </span>
-                            <span className="mt-0.5 block truncate text-xs text-muted-foreground">
+                            <span className="mt-1 block truncate text-xs text-muted-foreground">
                               {[s.city, s.state].filter(Boolean).join('/') || 'Localização não informada'}
                               {!s.whatsapp && ' · sem WhatsApp'}
                             </span>
                             {s.supplierProfile?.categories.length ? (
-                              <span className="mt-1.5 flex flex-wrap gap-1">
+                              <span className="mt-2 flex flex-wrap gap-1">
                                 {s.supplierProfile.categories.slice(0, 3).map((c) => (
-                                  <Badge key={c} tone="outline" className="px-1.5 py-0 text-[10px]">{c}</Badge>
+                                  <Badge key={c} tone="outline" className="px-2 py-0 text-[10px]">{c}</Badge>
                                 ))}
                               </span>
                             ) : null}

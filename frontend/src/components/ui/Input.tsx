@@ -19,11 +19,11 @@ interface FieldWrapperProps {
 
 function Field({ label, hint, error, required, className, id, children }: FieldWrapperProps) {
   return (
-    <div className={cn('space-y-1.5', className)}>
+    <div className={cn('space-y-2', className)}>
       {label && (
         <label htmlFor={id} className="block text-[13px] font-medium text-foreground">
           {label}
-          {required && <span className="ml-0.5 text-destructive">*</span>}
+          {required && <span className="ml-1 text-destructive">*</span>}
         </label>
       )}
       {children}

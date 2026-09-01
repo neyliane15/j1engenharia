@@ -65,7 +65,7 @@ export default function PriceHistory() {
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 placeholder="Ex.: cimento, porcelanato, cabo flexível"
-                className="pl-9"
+                className="pl-8"
                 value={term}
                 onChange={(e) => setTerm(e.target.value)}
               />
@@ -94,7 +94,7 @@ export default function PriceHistory() {
       ) : (
         <>
           <div className="mb-6 grid gap-4 sm:grid-cols-3">
-            <StatCard label="Menor preço" value={formatMoney(data.min)} accent />
+            <StatCard label="Menor preço" value={formatMoney(data.min)} />
             <StatCard label="Preço médio" value={formatMoney(data.avg)} hint={`${data.count} cotações`} />
             <StatCard label="Maior preço" value={formatMoney(data.max)} />
           </div>
@@ -128,7 +128,7 @@ export default function PriceHistory() {
                       <Td>{p.description}</Td>
                       <Td className="text-muted-foreground">{p.supplier}</Td>
                       <Td numeric className="font-medium">{formatMoney(p.unitPrice)}</Td>
-                      <Td>{p.approved ? <Badge tone="success">Comprado</Badge> : <Badge tone="outline">Cotado</Badge>}</Td>
+                      <Td>{p.approved ? <Badge tone="approved">Comprado</Badge> : <Badge tone="outline">Cotado</Badge>}</Td>
                     </Tr>
                   ))}
                 </tbody>

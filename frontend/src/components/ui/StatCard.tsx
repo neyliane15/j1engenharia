@@ -11,15 +11,14 @@ interface StatCardProps {
   trend?: number;
   /** Em custos, cair é bom: inverte a cor da tendência. */
   invertTrend?: boolean;
-  accent?: boolean;
   className?: string;
 }
 
-export function StatCard({ label, value, hint, icon, trend, invertTrend, accent, className }: StatCardProps) {
+export function StatCard({ label, value, hint, icon, trend, invertTrend, className }: StatCardProps) {
   const good = trend === undefined ? null : invertTrend ? trend <= 0 : trend >= 0;
 
   return (
-    <div className={cn(accent ? 'surface-accent' : 'surface', 'p-5', className)}>
+    <div className={cn('surface p-6', className)}>
       <div className="flex items-start justify-between gap-3">
         <p className="text-[13px] font-medium text-muted-foreground">{label}</p>
         {icon && (
@@ -29,14 +28,16 @@ export function StatCard({ label, value, hint, icon, trend, invertTrend, accent,
         )}
       </div>
 
-      <p className="num mt-2 text-[26px] font-semibold leading-tight tracking-tight text-foreground">{value}</p>
+      <p className="num mt-2 text-[26px] font-medium leading-tight tracking-tight text-foreground">{value}</p>
 
-      <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1">
+      <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1">
         {trend !== undefined && (
           <span
             className={cn(
-              'num inline-flex items-center gap-0.5 rounded px-1.5 py-0.5 text-xs font-medium',
-              good ? 'bg-success/10 text-success' : 'bg-destructive/10 text-destructive',
+              'num inline-flex items-center gap-1 rounded px-2 py-1 text-xs font-medium',
+              good
+                ? 'bg-state-approved text-state-approved-foreground'
+                : 'bg-state-rejected text-state-rejected-foreground',
             )}
           >
             {trend >= 0 ? <ArrowUpRight className="h-3 w-3" /> : <ArrowDownRight className="h-3 w-3" />}

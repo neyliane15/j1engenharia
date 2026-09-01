@@ -200,7 +200,7 @@ quotationsRouter.post(
 
     if (data.projectId) {
       const project = await prisma.project.findFirst({ where: { id: data.projectId, companyId: buyerCompanyId } });
-      if (!project) throw BadRequest('Obra não encontrada nesta empresa');
+      if (!project) throw BadRequest('Centro de custo não encontrado nesta empresa');
     }
 
     const suppliers = data.supplierIds.length

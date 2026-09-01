@@ -63,12 +63,12 @@ export default function Register() {
 
   if (done) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-background px-5">
-        <div className="surface-accent w-full max-w-md p-8 text-center">
+      <div className="flex min-h-screen items-center justify-center bg-background px-6">
+        <div className="surface w-full max-w-md p-8 text-center">
           <span className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-success/10">
             <CheckCircle2 className="h-7 w-7 text-success" />
           </span>
-          <h1 className="text-2xl text-foreground">Cadastro enviado!</h1>
+          <h1 className="text-foreground">Cadastro enviado</h1>
           <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
             Um administrador vai revisar e liberar o seu acesso. Assim que for aprovado, você entra normalmente com o
             e-mail e a senha que acabou de criar.
@@ -82,10 +82,10 @@ export default function Register() {
   }
 
   return (
-    <div className="min-h-screen bg-background px-5 py-10 sm:px-8">
+    <div className="min-h-screen bg-background px-6 py-8 sm:px-8">
       <div className="mx-auto w-full max-w-2xl">
         <Link to="/entrar" className="inline-block">
-          <Logo showTagline />
+          <Logo />
         </Link>
 
         <h1 className="mt-8 text-2xl text-foreground">Solicitar acesso</h1>
@@ -93,9 +93,9 @@ export default function Register() {
           Preencha os dados da sua empresa. O acesso é liberado por um administrador.
         </p>
 
-        <form onSubmit={onSubmit} className="mt-7 space-y-6">
+        <form onSubmit={onSubmit} className="mt-6 space-y-6">
           {/* Perfil */}
-          <fieldset className="surface p-5">
+          <fieldset className="surface p-6">
             <legend className="px-1 text-[13px] font-medium text-foreground">Como você vai usar o Emptra?</legend>
             <div className="mt-3 grid gap-3 sm:grid-cols-2">
               {(
@@ -115,10 +115,10 @@ export default function Register() {
                       : 'border-border bg-card hover:border-primary/35',
                   )}
                 >
-                  <opt.icon className={cn('mt-0.5 h-5 w-5 shrink-0', role === opt.value ? 'text-primary' : 'text-muted-foreground')} />
+                  <opt.icon className={cn('mt-1 h-5 w-5 shrink-0', role === opt.value ? 'text-primary' : 'text-muted-foreground')} />
                   <span>
                     <span className="block text-sm font-medium text-foreground">{opt.title}</span>
-                    <span className="mt-0.5 block text-xs leading-snug text-muted-foreground">{opt.text}</span>
+                    <span className="mt-1 block text-xs leading-snug text-muted-foreground">{opt.text}</span>
                   </span>
                 </button>
               ))}
@@ -126,7 +126,7 @@ export default function Register() {
           </fieldset>
 
           {/* Empresa */}
-          <fieldset className="surface space-y-4 p-5">
+          <fieldset className="surface space-y-4 p-6">
             <legend className="px-1 text-[13px] font-medium text-foreground">Dados da empresa</legend>
             <Input name="companyName" label="Razão social ou nome fantasia" required placeholder="Construtora Exemplo Ltda" />
             <div className="grid gap-4 sm:grid-cols-2">
@@ -177,7 +177,7 @@ export default function Register() {
           </fieldset>
 
           {/* Responsável */}
-          <fieldset className="surface space-y-4 p-5">
+          <fieldset className="surface space-y-4 p-6">
             <legend className="px-1 text-[13px] font-medium text-foreground">Seus dados de acesso</legend>
             <Input name="name" label="Nome completo" required placeholder="Maria Souza" />
             <Input name="email" type="email" label="E-mail" required placeholder="voce@empresa.com.br" />
@@ -188,7 +188,7 @@ export default function Register() {
           </fieldset>
 
           {error && (
-            <div role="alert" className="rounded-md border border-destructive/30 bg-destructive/5 px-3.5 py-2.5 text-sm text-destructive">
+            <div role="alert" className="rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
               {error}
             </div>
           )}
