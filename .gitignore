@@ -16,3 +16,6 @@ frontend/.vite/
 n8n/data/
 postgres-data/
 backend/uploads/
+
+# Cache incremental do TypeScript — artefato de build, não versionar.
+*.tsbuildinfo
